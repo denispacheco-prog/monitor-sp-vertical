@@ -17,7 +17,7 @@
       --cat-favoritos:  #d97706;
       /* light */
       --bg-body:        #f1f3f4;
-      --bg-header:      #1a1a2e;
+      --bg-header:      #0d0d0d;
       --text-header:    #f0f0f0;
       --bg-painel:      #ffffff;
       --bg-painel-hdr:  #f8f9fa;
@@ -25,7 +25,7 @@
       --text-main:      #2d2d2d;
       --border:         #dde1e7;
       --bg-hover:       #f7f9fb;
-      --link-color:     #1a1a2e;
+      --link-color:     #111111;
       --text-muted:     #6b7280;
       --bg-count:       #eaecef;
       --text-count:     #374151;
@@ -45,16 +45,16 @@
       );
     }
     body.dark-theme {
-      --bg-body:        #0e0e18;
-      --bg-painel:      #14142a;
-      --bg-painel-hdr:  #1a1a30;
-      --bg-barra:       #10101f;
+      --bg-body:        #080808;
+      --bg-painel:      #111111;
+      --bg-painel-hdr:  #161616;
+      --bg-barra:       #0c0c0c;
       --text-main:      #e2e4ec;
-      --border:         #252540;
-      --bg-hover:       #1e1e36;
+      --border:         #222222;
+      --bg-hover:       #1a1a1a;
       --link-color:     #ffffff;
       --text-muted:     #7b7f99;
-      --bg-count:       #1e1e38;
+      --bg-count:       #181818;
       --text-count:     #9da0bb;
       --cat-transporte: #ff9956;
       --cat-servicos:   #4db6ac;
@@ -295,9 +295,9 @@
     .painel.tipo-favoritos  { border-top: 3px solid var(--cat-favoritos); }
 
     .painel.painel-diario { background: #fdf8f4; }
-    body.dark-theme .painel.painel-diario { background: #1a1420; }
+    body.dark-theme .painel.painel-diario { background: #141414; }
     .painel.painel-diario .painel-header { background: #f5eee6; }
-    body.dark-theme .painel.painel-diario .painel-header { background: #221828; }
+    body.dark-theme .painel.painel-diario .painel-header { background: #181818; }
 
     .painel.col-oculta  { display: none; }
     .painel.atualizando .painel-corpo { opacity: 0.45; transition: opacity 0.3s; }
@@ -453,7 +453,7 @@
     .toast {
       position: fixed; bottom: 16px; left: 50%;
       transform: translateX(-50%) translateY(8px);
-      background: #1a1a2e; color: #f0f0f0;
+      background: #0d0d0d; color: #f0f0f0;
       padding: 7px 16px; border-radius: 5px; font-size: 11px;
       opacity: 0; pointer-events: none;
       transition: opacity 0.25s, transform 0.25s;
