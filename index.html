@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitor SP — Vertical</title>
+  <style>
+    /* ============================================================
+       TOKENS — light default, dark override
+    ============================================================ */
+    :root {
+      --accent:         #e8621a;
+      --cat-transporte: #e8621a;
+      --cat-servicos:   #00897b;
+      --cat-noticias:   #5c6bc0;
+      --cat-infra:      #b45309;
+      --cat-favoritos:  #d97706;
+      /* light */
+      --bg-body:        #f1f3f4;
+      --bg-header:      #1a1a2e;
+      --text-header:    #f0f0f0;
+      --bg-painel:      #ffffff;
+      --bg-painel-hdr:  #f8f9fa;
+      --bg-barra:       #ffffff;
+      --text-main:      #2d2d2d;
+      --border:         #dde1e7;
+      --bg-hover:       #f7f9fb;
+      --link-color:     #1a1a2e;
+      --text-muted:     #6b7280;
+      --bg-count:       #eaecef;
+      --text-count:     #374151;
+      /* layout */
+      --panel-h:        calc(25vh - 30px);
+      --font-link:      13px;
+      --font-meta:      11px;
+      --item-pv:        9px;
+      --item-ph:        12px;
+      --header-stripe: repeating-linear-gradient(
+        90deg,
+        #e8621a 0px, #e8621a 24px,
+        #00897b 24px, #00897b 48px,
+        #5c6bc0 48px, #5c6bc0 72px,
+        #f7c948 72px, #f7c948 96px,
+        #e8621a 96px
+      );
+    }
+    body.dark-theme {
+      --bg-body:        #0e0e18;
+      --bg-painel:      #14142a;
+      --bg-painel-hdr:  #1a1a30;
+      --bg-barra:       #10101f;
+      --text-main:      #e2e4ec;
+      --border:         #252540;
+      --bg-hover:       #1e1e36;
+      --link-color:     #c9b8ff;
+      --text-muted:     #7b7f99;
+      --bg-count:       #1e1e38;
+      --text-count:     #9da0bb;
+      --cat-transporte: #ff9956;
+      --cat-servicos:   #4db6ac;
+      --cat-noticias:   #9fa8da;
+      --cat-infra:      #f59e0b;
+    }
+
+    /* ============================================================ BASE */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg-body);
+      color: var(--text-main);
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .layout { display: flex; flex-direction: column; height: 100vh; }
+
+    /* ============================================================ HEADER */
+    header {
+      background: var(--bg-header);
+      color: var(--text-header);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: background-color 0.3s;
+    }
+    .header-stripe { height: 3px; background: var(--header-stripe); }
+    .header-inner {
+      padding: 5px 12px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .h1-sp {
+      background: var(--accent); color: #fff;
+      padding: 1px 6px 2px; border-radius: 4px;
+      font-size: 12px; font-weight: 800; letter-spacing: 0.04em; flex-shrink: 0;
+    }
+    .header-title { font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    .monitor-info {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 10px; color: rgba(255,255,255,0.45);
+      flex: 1; min-width: 0; overflow: hidden;
+    }
+    .monitor-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #4ade80; flex-shrink: 0;
+      box-shadow: 0 0 0 0 rgba(74,222,128,0.5);
+    }
+    .monitor-dot.pulsando   { animation: pulse-dot 1.4s ease-in-out infinite; }
+    .monitor-dot.carregando { background: #fbbf24; animation: pulse-dot 0.7s ease-in-out infinite; }
+    .monitor-dot.erro       { background: #f87171; animation: none; }
+    @keyframes pulse-dot {
+      0%   { box-shadow: 0 0 0 0 rgba(74,222,128,0.5); }
+      70%  { box-shadow: 0 0 0 5px rgba(74,222,128,0); }
+      100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+    }
+    .monitor-status    { color: rgba(255,255,255,0.65); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .monitor-sep       { opacity: 0.3; flex-shrink: 0; }
+    .monitor-countdown { font-variant-numeric: tabular-nums; flex-shrink: 0; }
+    .header-actions    { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+
+    .btn-icon {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.13);
+      color: var(--text-header);
+      width: 26px; height: 26px; border-radius: 5px;
+      cursor: pointer; font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, transform 0.3s;
+    }
+    .btn-icon:hover     { background: rgba(255,255,255,0.16); }
+    .btn-icon.girando   { animation: girar 0.8s linear; }
+    .btn-icon.ativo     { background: rgba(251,191,36,0.3); border-color: rgba(251,191,36,0.6); }
+    @keyframes girar { to { transform: rotate(360deg); } }
+
+    .btn-texto {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.13);
+      color: var(--text-header);
+      padding: 4px 9px; border-radius: 5px;
+      cursor: pointer; font-size: 11px;
+      transition: background 0.2s;
+      font-family: inherit; white-space: nowrap;
+    }
+    .btn-texto:hover  { background: rgba(255,255,255,0.16); }
+    .btn-texto.aberto { background: rgba(255,255,255,0.22); }
+
+    /* ============================================================ CONFIG PANEL */
+    .config-panel {
+      background: var(--bg-barra);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      padding: 0 12px;
+    }
+    .config-panel.aberto { max-height: 200px; padding: 10px 12px; }
+    .config-inner { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-start; }
+    .config-grupo { display: flex; flex-direction: column; gap: 5px; }
+    .config-grupo label {
+      font-size: 10px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .config-opcoes { display: flex; gap: 4px; align-items: center; }
+    .config-btn {
+      padding: 3px 9px; border-radius: 4px;
+      border: 1px solid var(--border); background: var(--bg-body);
+      color: var(--text-muted); font-size: 11px; cursor: pointer;
+      transition: all 0.15s; font-family: inherit;
+    }
+    .config-btn:hover  { border-color: var(--accent); color: var(--accent); }
+    .config-btn.ativo  { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .config-slider-wrap { display: flex; align-items: center; gap: 7px; }
+    .config-slider-wrap span { font-size: 10px; color: var(--text-muted); width: 38px; text-align: right; }
+    input[type=range].config-range {
+      -webkit-appearance: none; appearance: none;
+      width: 120px; height: 4px; border-radius: 2px;
+      background: var(--border); outline: none; cursor: pointer;
+    }
+    input[type=range].config-range::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 13px; height: 13px;
+      border-radius: 50%; background: var(--accent); cursor: pointer;
+    }
+    .config-reset {
+      margin-left: auto; font-size: 10px; color: var(--text-muted);
+      background: none; border: none; cursor: pointer;
+      padding: 3px 7px; border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+      font-family: inherit; align-self: flex-end;
+    }
+    .config-reset:hover { color: var(--accent); background: rgba(232,98,26,0.07); }
+
+    /* ============================================================ TOGGLE BAR */
+    .toggle-bar {
+      background: var(--bg-barra);
+      border-bottom: 1px solid var(--border);
+      padding: 5px 12px;
+      display: flex; align-items: center; gap: 5px;
+      flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+      transition: background-color 0.3s;
+      flex-shrink: 0;
+    }
+    .toggle-bar::-webkit-scrollbar { display: none; }
+    .btn-scroll-nav { font-size: 10px; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-body); color: var(--text-muted); cursor: pointer; transition: all 0.15s; font-family: inherit; white-space: nowrap; flex-shrink: 0; }
+    .btn-scroll-nav:hover { border-color: var(--accent); color: var(--accent); }
+    .toggle-bar label {
+      font-size: 10px; font-weight: 700; color: var(--text-muted);
+      white-space: nowrap; margin-right: 2px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .toggle-painel-btn {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 10px; padding: 2px 8px; border-radius: 4px;
+      border: 1px solid var(--border); background: var(--bg-body);
+      color: var(--text-muted); cursor: pointer;
+      transition: all 0.15s; user-select: none;
+      font-family: inherit; font-weight: 500; white-space: nowrap;
+    }
+    .toggle-painel-btn.ativo { background: var(--bg-header); color: #fff; border-color: transparent; }
+    .toggle-painel-btn.ativo.tipo-transporte { background: var(--cat-transporte); }
+    .toggle-painel-btn.ativo.tipo-servicos   { background: var(--cat-servicos); }
+    .toggle-painel-btn.ativo.tipo-noticias   { background: var(--cat-noticias); }
+    .toggle-painel-btn.ativo.tipo-infra      { background: var(--cat-infra); }
+    .toggle-painel-btn.ativo.tipo-favoritos  { background: var(--cat-favoritos); }
+    .toggle-painel-btn:not(.ativo) { opacity: 0.4; }
+    .toggle-painel-btn:hover { opacity: 1; }
+    .toggle-painel-btn.dragging-btn  { opacity: 0.3 !important; outline: 2px dashed var(--accent); }
+    .toggle-painel-btn.drag-over-btn { outline: 2px solid var(--accent); opacity: 1 !important; }
+    .toggle-painel-btn:hover { opacity: 1; }
+
+    /* ============================================================ BUSCA */
+    .busca-bar {
+      background: var(--bg-barra);
+      border-bottom: 1px solid var(--border);
+      padding: 5px 10px;
+      display: flex; align-items: center; gap: 5px;
+      flex-shrink: 0; transition: background-color 0.3s;
+    }
+    .busca-bar input {
+      flex: 1; border: 1px solid var(--border);
+      background: var(--bg-body); color: var(--text-main);
+      border-radius: 4px; padding: 4px 8px; font-size: 12px;
+      outline: none; font-family: inherit; transition: border-color 0.2s;
+    }
+    .busca-bar input:focus { border-color: var(--accent); }
+    .busca-bar input::placeholder { color: var(--text-muted); }
+    .btn-busca {
+      background: var(--bg-header); color: #fff;
+      border: none; border-radius: 4px;
+      padding: 4px 10px; font-size: 11px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: opacity 0.2s;
+    }
+    .btn-busca:hover { opacity: 0.85; }
+    .btn-limpar {
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: 4px;
+      padding: 4px 8px; font-size: 11px; cursor: pointer;
+      font-family: inherit; transition: all 0.15s;
+    }
+    .btn-limpar:hover { color: var(--accent); border-color: var(--accent); }
+    .resultado-info { font-size: 10px; color: var(--accent); white-space: nowrap; flex-shrink: 0; }
+
+    /* ============================================================ GRADE */
+    .grade {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-auto-rows: var(--panel-h);
+      gap: 6px;
+      padding: 6px;
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      align-content: start;
+    }
+    .grade.uma-coluna { grid-template-columns: 1fr; }
+    .grade::-webkit-scrollbar { width: 4px; }
+    .grade::-webkit-scrollbar-track { background: transparent; }
+    .grade::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ============================================================ PAINEL */
+    .painel {
+      background: var(--bg-painel);
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      transition: background-color 0.3s, box-shadow 0.2s, opacity 0.2s;
+    }
+    .painel.tipo-transporte { border-top: 3px solid var(--cat-transporte); }
+    .painel.tipo-servicos   { border-top: 3px solid var(--cat-servicos); }
+    .painel.tipo-noticias   { border-top: 3px solid var(--cat-noticias); }
+    .painel.tipo-infra      { border-top: 3px solid var(--cat-infra); }
+    .painel.tipo-favoritos  { border-top: 3px solid var(--cat-favoritos); }
+
+    .painel.painel-diario { background: #fdf8f4; }
+    body.dark-theme .painel.painel-diario { background: #1a1420; }
+    .painel.painel-diario .painel-header { background: #f5eee6; }
+    body.dark-theme .painel.painel-diario .painel-header { background: #221828; }
+
+    .painel.col-oculta  { display: none; }
+    .painel.atualizando .painel-corpo { opacity: 0.45; transition: opacity 0.3s; }
+    .painel.dragging    { opacity: 0.45; outline: 2px dashed var(--accent); }
+    .painel.drag-over   { outline: 2px solid var(--accent); }
+
+    .painel-header {
+      padding: 6px 10px;
+      background: var(--bg-painel-hdr);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0; cursor: grab; user-select: none;
+      transition: background-color 0.3s;
+    }
+    .painel-header:active { cursor: grabbing; }
+    .painel-titulo {
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      display: flex; align-items: center; gap: 4px;
+      pointer-events: none;
+    }
+    .painel.tipo-transporte .painel-titulo { color: var(--cat-transporte); }
+    .painel.tipo-servicos   .painel-titulo { color: var(--cat-servicos); }
+    .painel.tipo-noticias   .painel-titulo { color: var(--cat-noticias); }
+    .painel.tipo-infra      .painel-titulo { color: var(--cat-infra); }
+    .painel.tipo-favoritos  .painel-titulo { color: var(--cat-favoritos); }
+
+    .painel-meta { display: flex; align-items: center; gap: 4px; }
+    .painel-count {
+      font-size: 9px; background: var(--bg-count); color: var(--text-count);
+      padding: 1px 6px; border-radius: 20px; font-weight: 700; pointer-events: none;
+    }
+    .col-status-icon { font-size: 9px; color: var(--text-muted); }
+    .badge-nao-lido {
+      display: inline-block; background: var(--accent); color: #fff;
+      font-size: 8px; font-weight: 700; padding: 1px 4px;
+      border-radius: 8px; letter-spacing: 0.02em;
+    }
+    .btn-col-expand { background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; padding: 0 3px; border-radius: 3px; line-height: 1; opacity: 0; transition: opacity 0.2s, color 0.15s; }
+    .painel-header:hover .btn-col-expand { opacity: 0.7; }
+    .btn-col-expand:hover { opacity: 1 !important; color: var(--accent); }
+    .btn-col-expand.ativo { opacity: 1 !important; color: var(--accent); }
+    .painel.col-expandida { grid-column: span 2; }
+
+    .btn-refresh-painel {
+      background: none; border: none; color: var(--text-muted);
+      font-size: 11px; cursor: pointer; padding: 0 2px;
+      line-height: 1; opacity: 0;
+      transition: opacity 0.2s, color 0.15s, transform 0.3s;
+    }
+    .painel-header:hover .btn-refresh-painel { opacity: 0.6; }
+    .btn-refresh-painel:hover  { opacity: 1 !important; color: var(--accent); }
+    .btn-refresh-painel.girando { animation: girar 0.7s linear; }
+
+    .btn-minimizar {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); font-size: 10px; padding: 0 2px;
+      line-height: 1; opacity: 0; transition: opacity 0.15s, transform 0.2s;
+    }
+    .painel-header:hover .btn-minimizar { opacity: 0.6; }
+    .btn-minimizar:hover { opacity: 1 !important; color: var(--accent); }
+    .painel.minimizado .painel-corpo { display: none; }
+    .painel.minimizado .btn-minimizar { transform: rotate(180deg); }
+
+    .painel-corpo {
+      flex: 1; overflow-y: auto; overflow-x: hidden;
+    }
+    .painel-corpo::-webkit-scrollbar { width: 3px; }
+    .painel-corpo::-webkit-scrollbar-track { background: transparent; }
+    .painel-corpo::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ============================================================ ITENS */
+    .item {
+      padding: var(--item-pv) var(--item-ph);
+      border-bottom: 1px solid var(--border);
+      position: relative; transition: background 0.12s;
+    }
+    .item:hover { background: var(--bg-hover); }
+    .item:last-child { border-bottom: none; }
+    .item.oculto { display: none; }
+    .item a {
+      font-weight: 600; color: var(--link-color); text-decoration: none;
+      font-size: var(--font-link); display: block;
+      margin-bottom: 2px; line-height: 1.35; padding-right: 18px;
+    }
+    .item a:hover { text-decoration: underline; }
+    .item img { width: 100%; border-radius: 4px; margin-bottom: 5px; }
+    .item .data  { font-size: var(--font-meta); color: var(--text-muted); }
+    .item .fonte { font-size: var(--font-meta); color: var(--text-muted); margin-top: 1px; opacity: 0.8; }
+    .item-lido   { opacity: 0.55; }
+    .item-lido > a { font-weight: 500 !important; }
+
+    .btn-star {
+      position: absolute; top: 6px; right: 6px;
+      background: none; border: none; color: var(--text-muted);
+      font-size: 13px; cursor: pointer; padding: 1px 2px;
+      line-height: 1; opacity: 0; transition: opacity 0.15s, color 0.15s;
+    }
+    .item:hover .btn-star  { opacity: 0.45; }
+    .btn-star:hover        { opacity: 1 !important; color: #f59e0b !important; }
+    .btn-star.ativo        { opacity: 1 !important; color: #f59e0b !important; }
+
+    .fav-fonte-tag {
+      display: inline-block; font-size: 8px; background: var(--bg-count);
+      color: var(--text-count); padding: 1px 5px; border-radius: 3px;
+      margin-top: 2px; font-weight: 600; letter-spacing: 0.03em;
+    }
+    .cache-aviso {
+      background: #fff4e6; border-bottom: 1px solid #ffd49b;
+      padding: 5px 10px; font-size: 10px; color: #92700a;
+      display: flex; align-items: center; gap: 4px;
+    }
+    body.dark-theme .cache-aviso { background: #2a1800; border-color: #5a3500; color: #d4aa40; }
+
+    /* painel-card */
+    .painel-card {
+      display: block; padding: var(--item-pv) var(--item-ph);
+      border-bottom: 1px solid var(--border);
+      text-decoration: none; color: var(--text-main); transition: background 0.12s;
+    }
+    .painel-card:hover { background: var(--bg-hover); }
+    .painel-card-titulo { font-size: var(--font-link); font-weight: 700; color: var(--link-color); margin-bottom: 1px; }
+    .painel-card-desc   { font-size: var(--font-meta); color: var(--text-muted); line-height: 1.35; }
+    .painel-card-tag {
+      display: inline-block; font-size: 8px; font-weight: 700;
+      padding: 1px 5px; border-radius: 8px; margin-top: 3px;
+      color: #fff; background: var(--accent); letter-spacing: 0.04em;
+    }
+    .painel-card-tag.verde  { background: var(--cat-servicos); }
+    .painel-card-tag.roxo   { background: var(--cat-noticias); }
+    .painel-card-tag.marrom { background: var(--cat-infra); }
+
+    /* clima */
+    .clima-loading { font-size: 11px; color: var(--text-muted); padding: 14px; text-align: center; }
+    .clima-dia {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 5px var(--item-ph); border-bottom: 1px solid var(--border);
+    }
+    .clima-dia:last-child  { border-bottom: none; }
+    .clima-dia-nome  { color: var(--text-main); font-weight: 600; min-width: 44px; font-size: var(--font-meta); }
+    .clima-dia-emoji { font-size: 14px; }
+    .clima-dia-temp  { color: var(--text-muted); font-size: var(--font-meta); text-align: right; }
+
+    /* estado */
+    .estado { padding: 16px 12px; font-size: 11px; color: var(--text-muted); text-align: center; }
+    .sem-resultado { display: none; padding: 12px; font-size: 11px; color: var(--text-muted); text-align: center; }
+    .sem-resultado.visivel { display: block; }
+
+    mark { background: #ffd180; color: #000; border-radius: 2px; padding: 0 2px; }
+    body.dark-theme mark { background: #7c5a00; color: #ffe8a0; }
+
+    /* ============================================================ TOAST */
+    .toast {
+      position: fixed; bottom: 16px; left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      background: #1a1a2e; color: #f0f0f0;
+      padding: 7px 16px; border-radius: 5px; font-size: 11px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 9999; white-space: nowrap;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+    }
+    body.dark-theme .toast { background: #f0f0f0; color: #1a1a2e; }
+    .toast.visivel { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-stripe"></div>
+    <div class="header-inner">
+      <span class="h1-sp">SP</span>
+      <span class="header-title">Monitor</span>
+      <div class="monitor-info">
+        <span class="monitor-dot" id="monitor-dot"></span>
+        <span class="monitor-status" id="monitor-status">Inicializando...</span>
+        <span class="monitor-sep">·</span>
+        <span class="monitor-countdown" id="monitor-countdown"></span>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" id="btn-refresh-all" onclick="refreshManual()" title="Atualizar agora (R)">↻</button>
+        <button class="btn-icon" id="btn-notif" onclick="toggleNotificacoes()" title="Ativar notificações">🔕</button>
+        <button class="btn-texto" id="btn-theme" onclick="toggleTema()">🌙 Escuro</button>
+        <button class="btn-texto" id="btn-config" onclick="toggleConfig()">⚙️ Layout</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONFIG PANEL -->
+  <div class="config-panel" id="config-panel">
+    <div class="config-inner">
+      <div class="config-grupo">
+        <label>Altura dos painéis</label>
+        <div class="config-slider-wrap">
+          <input type="range" class="config-range" id="slider-altura" min="18" max="42" step="2" value="25" oninput="aplicarAltura(this.value)">
+          <span id="label-altura">25vh</span>
+        </div>
+      </div>
+      <div class="config-grupo">
+        <label>Colunas</label>
+        <div class="config-opcoes">
+          <button class="config-btn" data-config="colunas" data-val="1" onclick="aplicarConfig(this)">1 col</button>
+          <button class="config-btn ativo" data-config="colunas" data-val="2" onclick="aplicarConfig(this)">2 cols</button>
+        </div>
+      </div>
+      <div class="config-grupo">
+        <label>Densidade</label>
+        <div class="config-opcoes">
+          <button class="config-btn" data-config="densidade" data-val="compacto" onclick="aplicarConfig(this)">Compacto</button>
+          <button class="config-btn ativo" data-config="densidade" data-val="normal" onclick="aplicarConfig(this)">Normal</button>
+          <button class="config-btn" data-config="densidade" data-val="espaçoso" onclick="aplicarConfig(this)">Espaçoso</button>
+        </div>
+      </div>
+      <div class="config-grupo">
+        <label>Fonte</label>
+        <div class="config-opcoes">
+          <button class="config-btn" data-config="fonte" data-val="P" onclick="aplicarConfig(this)" style="font-size:10px">P</button>
+          <button class="config-btn ativo" data-config="fonte" data-val="M" onclick="aplicarConfig(this)" style="font-size:12px">M</button>
+          <button class="config-btn" data-config="fonte" data-val="G" onclick="aplicarConfig(this)" style="font-size:14px">G</button>
+        </div>
+      </div>
+      <button class="config-reset" onclick="resetarConfig()">↺ Restaurar</button>
+    </div>
+  </div>
+
+  <!-- TOGGLE DE PAINÉIS -->
+  <div class="toggle-bar" id="toggle-bar">
+    <button class="btn-scroll-nav" onclick="document.getElementById('grade').scrollTo({top:0,behavior:'smooth'})" title="Ir para o topo">▲▲</button>
+    <button class="btn-scroll-nav" onclick="document.getElementById('grade').scrollTo({top:99999,behavior:'smooth'})" title="Ir para o final">▼▼</button>
+    <label>Painéis:</label>
+    <button class="toggle-painel-btn tipo-favoritos ativo"  data-col="col-favoritos"   onclick="togglePainel(this)">⭐ Favoritos</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-diario"      onclick="togglePainel(this)">🚇 Diário</button>
+    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-trens"       onclick="togglePainel(this)">🚉 Trens</button>
+    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-cet"         onclick="togglePainel(this)">🚦 CET</button>
+    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-waze"        onclick="togglePainel(this)">🗺️ Waze</button>
+    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-clima"       onclick="togglePainel(this)">🌦️ Clima</button>
+    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-mananciais"  onclick="togglePainel(this)">💧 Mananciais</button>
+    <button class="toggle-painel-btn tipo-infra ativo"      data-col="col-enel"        onclick="togglePainel(this)">⚡ ENEL</button>
+    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-sptrans"     onclick="togglePainel(this)">🚌 SPTrans</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-tv"          onclick="togglePainel(this)">🌧️ Windy</button>
+    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-voos"         onclick="togglePainel(this)">✈️ Voos</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-assembleia"  onclick="togglePainel(this)">🏛️ AL-SP</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-camara"      onclick="togglePainel(this)">🏙️ Câmara SP</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-g1"          onclick="togglePainel(this)">📰 G1 SP</button>
+    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-ar"          onclick="togglePainel(this)">🌫️ Ar</button>
+    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-rodovias"    onclick="togglePainel(this)">🛣️ Rodovias</button>
+  </div>
+
+  <!-- BUSCA -->
+  <div class="busca-bar">
+    <input type="text" id="campo-busca" placeholder="Filtrar... (/ para focar, Enter para buscar)" />
+    <button class="btn-busca" onclick="aplicarFiltros()">Buscar</button>
+    <button class="btn-limpar" onclick="limpar()">✕</button>
+    <span class="resultado-info" id="resultado-info"></span>
+  </div>
+
+  <!-- GRADE DE PAINÉIS -->
+  <div class="grade" id="grade">
+
+    <div class="painel tipo-favoritos" id="col-favoritos" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">⭐ Favoritos</span>
+        <div class="painel-meta">
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-favoritos')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-favoritos">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="favoritos-container" class="estado">Nenhum favorito ainda.<br><small style="opacity:0.6">Clique em ★ em qualquer item.</small></div>
+        <div id="sem-favoritos" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <div class="painel tipo-noticias painel-diario" id="col-diario" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🚇 Diário do Transporte <span class="col-status-icon" id="status-col-diario"></span></span>
+        <div class="painel-meta">
+          <span class="badge-nao-lido" id="nao-lidos-col-diario" style="display:none"></span>
+          <button class="btn-refresh-painel" id="refresh-col-diario" onclick="refreshColuna('col-diario')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-diario')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-diario">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="diario-container" class="estado">Carregando...</div>
+        <div id="sem-diario" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <div class="painel tipo-transporte" id="col-trens" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🚉 Trens & Metrô <span class="col-status-icon" id="status-col-trens"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-trens" onclick="refreshColuna('col-trens')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-trens')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-trens">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="trens-container" class="estado">Carregando...</div>
+        <div id="sem-trens" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <div class="painel tipo-transporte" id="col-cet" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🚦 CET-SP <span class="col-status-icon" id="status-col-cet"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-cet" onclick="refreshColuna('col-cet')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-cet')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-cet">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="cet-container"></div>
+        <div id="sem-cet" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <div class="painel tipo-transporte" id="col-waze" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🗺️ Waze <span class="col-status-icon" id="status-col-waze"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-waze" onclick="refreshColuna('col-waze')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-waze')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-waze">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="waze-container"></div>
+        <div id="sem-waze" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <div class="painel tipo-servicos" id="col-clima" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🌦️ Clima — SP <span class="col-status-icon" id="status-col-clima"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-clima" onclick="refreshColuna('col-clima')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-clima')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-clima">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="clima-container" class="estado">Carregando...</div>
+        <div id="sem-clima" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <div class="painel tipo-servicos" id="col-mananciais" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">💧 Mananciais <span class="col-status-icon" id="status-col-mananciais"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-mananciais" onclick="refreshColuna('col-mananciais')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-mananciais')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-mananciais">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="mananciais-container"></div>
+        <div id="sem-mananciais" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <div class="painel tipo-infra" id="col-enel" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">⚡ ENEL Luz <span class="col-status-icon" id="status-col-enel"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-enel" onclick="refreshColuna('col-enel')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-enel')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-enel">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="enel-container"></div>
+        <div id="sem-enel" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <!-- SPTRANS -->
+    <div class="painel tipo-transporte" id="col-sptrans" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🚌 SPTrans — Ônibus <span class="col-status-icon" id="status-col-sptrans"></span></span>
+        <div class="painel-meta">
+          <span class="badge-nao-lido" id="nao-lidos-col-sptrans" style="display:none"></span>
+          <button class="btn-refresh-painel" id="refresh-col-sptrans" onclick="refreshColuna('col-sptrans')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-sptrans')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-sptrans">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="sptrans-container" class="estado">Carregando...</div>
+        <div id="sem-sptrans" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <!-- VOOS AO VIVO — FLIGHTRADAR24 -->
+    <div class="painel tipo-transporte" id="col-voos" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">✈️ Voos ao Vivo — SP <span class="col-status-icon" id="status-col-voos"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-voos" onclick="refreshColuna('col-voos')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-voos')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-voos">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo" style="overflow:hidden;padding:0;">
+        <div id="voos-container"></div>
+        <div id="sem-voos" class="sem-resultado"></div>
+      </div>
+    </div>
+
+    <!-- RADAR DE CHUVA — WINDY -->
+    <div class="painel tipo-noticias" id="col-tv" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🌧️ Radar de Chuva — Windy <span class="col-status-icon" id="status-col-tv"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-tv" onclick="refreshColuna('col-tv')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-tv')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-tv">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo" style="overflow:hidden;padding:0;">
+        <div id="tv-container"></div>
+        <div id="sem-tv" class="sem-resultado"></div>
+      </div>
+    </div>
+
+    <!-- ASSEMBLEIA LEGISLATIVA SP -->
+    <div class="painel tipo-noticias" id="col-assembleia" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🏛️ Assembleia Legislativa SP <span class="col-status-icon" id="status-col-assembleia"></span></span>
+        <div class="painel-meta">
+          <span class="badge-nao-lido" id="nao-lidos-col-assembleia" style="display:none"></span>
+          <button class="btn-refresh-painel" id="refresh-col-assembleia" onclick="refreshColuna('col-assembleia')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-assembleia')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-assembleia">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="assembleia-container" class="estado">Carregando...</div>
+        <div id="sem-assembleia" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <!-- CÂMARA MUNICIPAL SP -->
+    <div class="painel tipo-noticias" id="col-camara" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🏙️ Câmara Municipal SP <span class="col-status-icon" id="status-col-camara"></span></span>
+        <div class="painel-meta">
+          <span class="badge-nao-lido" id="nao-lidos-col-camara" style="display:none"></span>
+          <button class="btn-refresh-painel" id="refresh-col-camara" onclick="refreshColuna('col-camara')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-camara')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-camara">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="camara-container" class="estado">Carregando...</div>
+        <div id="sem-camara" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <!-- G1 SÃO PAULO -->
+    <div class="painel tipo-noticias" id="col-g1" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">📰 G1 São Paulo <span class="col-status-icon" id="status-col-g1"></span></span>
+        <div class="painel-meta">
+          <span class="badge-nao-lido" id="nao-lidos-col-g1" style="display:none"></span>
+          <button class="btn-refresh-painel" id="refresh-col-g1" onclick="refreshColuna('col-g1')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-g1')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-g1">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="g1-container" class="estado">Carregando...</div>
+        <div id="sem-g1" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <!-- QUALIDADE DO AR -->
+    <div class="painel tipo-servicos" id="col-ar" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🌫️ Qualidade do Ar <span class="col-status-icon" id="status-col-ar"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-ar" onclick="refreshColuna('col-ar')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-ar')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-ar">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="ar-container" class="estado">Carregando...</div>
+        <div id="sem-ar" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <!-- RODOVIAS SP -->
+    <div class="painel tipo-transporte" id="col-rodovias" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🛣️ Rodovias SP <span class="col-status-icon" id="status-col-rodovias"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-rodovias" onclick="refreshColuna('col-rodovias')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-rodovias')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-rodovias">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="rodovias-container"></div>
+        <div id="sem-rodovias" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ==============================
+  // CONFIGURAÇÕES
+  // ==============================
+  const PROXY      = "https://script.google.com/macros/s/AKfycbyV2j9g8KfbdoUKz5O16n6G7EWsoluJ1H3oFwnngugt_MQ_03Wfa52wV-EnEpUzIzqp/exec";
+  const RSS_DIARIO = "https://diariodotransporte.com.br/feed/";
+
+  const NOME_COL = {
+    'col-favoritos':  'Favoritos',
+    'col-diario':     'Diário do Transporte',
+    'col-trens':      'Trens & Metrô',
+    'col-cet':        'CET-SP',
+    'col-waze':       'Waze',
+    'col-clima':      'Clima',
+    'col-mananciais': 'Mananciais',
+    'col-enel':       'ENEL Luz',
+    'col-sptrans':    'SPTrans — Ônibus',
+    'col-tv':         'Radar de Chuva — Windy',
+    'col-voos':       'Voos ao Vivo — Flightradar24',
+    'col-assembleia': 'Assembleia Legislativa SP',
+    'col-camara':     'Câmara Municipal SP',
+    'col-g1':         'G1 São Paulo',
+    'col-ar':         'Qualidade do Ar',
+    'col-rodovias':   'Rodovias SP',
+  };
+
+  const COLUNAS = [
+    { container: "favoritos-container",  sem: "sem-favoritos",  count: "count-favoritos",  colId: "col-favoritos",  local: true,  fn: renderizarFavoritos },
+    { container: "diario-container",     sem: "sem-diario",     count: "count-diario",     colId: "col-diario",     local: false, fn: () => carregarDiario() },
+    { container: "trens-container",      sem: "sem-trens",      count: "count-trens",      colId: "col-trens",      local: false, fn: () => carregarTrens() },
+    { container: "cet-container",        sem: "sem-cet",        count: "count-cet",        colId: "col-cet",        local: false, fn: () => carregarCET() },
+    { container: "waze-container",       sem: "sem-waze",       count: "count-waze",       colId: "col-waze",       local: false, fn: () => carregarWaze() },
+    { container: "clima-container",      sem: "sem-clima",      count: "count-clima",      colId: "col-clima",      local: false, fn: () => carregarClima() },
+    { container: "mananciais-container", sem: "sem-mananciais", count: "count-mananciais", colId: "col-mananciais", local: false, fn: () => carregarMananciais() },
+    { container: "enel-container",       sem: "sem-enel",       count: "count-enel",       colId: "col-enel",       local: false, fn: () => carregarEnel() },
+    { container: "sptrans-container",    sem: "sem-sptrans",    count: "count-sptrans",    colId: "col-sptrans",    local: false, fn: () => carregarSPTrans() },
+    { container: "tv-container",         sem: "sem-tv",         count: "count-tv",         colId: "col-tv",         local: false, fn: () => carregarTV() },
+    { container: "voos-container",       sem: "sem-voos",       count: "count-voos",       colId: "col-voos",       local: false, fn: () => carregarVoos() },
+    { container: "assembleia-container", sem: "sem-assembleia", count: "count-assembleia", colId: "col-assembleia", local: false, fn: () => carregarAssembleia() },
+    { container: "camara-container",     sem: "sem-camara",     count: "count-camara",     colId: "col-camara",     local: false, fn: () => carregarCamara() },
+    { container: "g1-container",         sem: "sem-g1",         count: "count-g1",         colId: "col-g1",         local: false, fn: () => carregarG1() },
+    { container: "ar-container",         sem: "sem-ar",         count: "count-ar",         colId: "col-ar",         local: false, fn: () => carregarQualidadeAr() },
+    { container: "rodovias-container",   sem: "sem-rodovias",   count: "count-rodovias",   colId: "col-rodovias",   local: false, fn: () => carregarRodovias() },
+  ];
+
+  // ==============================
+  // ESTADO GLOBAL
+  // ==============================
+  let lidosSet        = new Set();
+  let favoritosArr    = [];
+  let termoAtual      = '';
+  let primeiroLoad    = true;
+  let itemsConhecidos = {};
+
+  // ==============================
+  // TOAST
+  // ==============================
+  let toastTimer;
+  function showToast(msg, dur = 2200) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('visivel');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('visivel'), dur);
+  }
+
+  // ==============================
+  // CRIAR ITEM DOM
+  // ==============================
+  function criarItem({ titulo, link, isodate, imgUrl, colId, extraHtml = '', sourceColId }) {
+    const key     = (link || titulo || '').trim();
+    const lido    = lidosSet.has(key);
+    const fav     = estaFavorito(key);
+    const realCol = sourceColId || colId;
+
+    const div = document.createElement('div');
+    div.className = 'item' + (lido ? ' item-lido' : '');
+    div.dataset.texto   = (titulo + ' ' + (extraHtml || '')).toLowerCase().replace(/<[^>]*>/g, '');
+    div.dataset.titulo  = titulo;
+    div.dataset.link    = link || '';
+    div.dataset.key     = key;
+    div.dataset.isodate = isodate || '';
+    div.dataset.col     = colId;
+
+    if (imgUrl) {
+      const img = document.createElement('img');
+      img.src = imgUrl; img.alt = ''; img.loading = 'lazy';
+      img.onerror = () => img.style.display = 'none';
+      div.appendChild(img);
+    }
+
+    const anchor = document.createElement('a');
+    anchor.href = link || '#'; anchor.target = '_blank'; anchor.rel = 'noopener';
+    anchor.textContent = titulo || '(sem título)';
+    if (key) anchor.addEventListener('click', () => marcarLido(key, div));
+    div.appendChild(anchor);
+
+    if (isodate) {
+      const dataDiv = document.createElement('div');
+      dataDiv.className = 'data';
+      const rel = formatarDataRelativa(isodate);
+      if (rel) dataDiv.textContent = rel;
+      div.appendChild(dataDiv);
+    }
+
+    if (extraHtml) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = extraHtml;
+      while (tmp.firstChild) div.appendChild(tmp.firstChild);
+    }
+
+    const star = document.createElement('button');
+    star.className = 'btn-star' + (fav ? ' ativo' : '');
+    star.dataset.favKey = key;
+    star.title = fav ? 'Remover dos favoritos' : 'Salvar nos favoritos';
+    star.textContent = '★';
+    star.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      toggleFavorito(key, star, div, { titulo, link, isodate, imgUrl, colId: realCol, extraHtml });
+    });
+    div.appendChild(star);
+    return div;
+  }
+
+  // ==============================
+  // LIDOS
+  // ==============================
+  function inicializarLidos() {
+    try { const r = localStorage.getItem('monitor-sp-lidos'); lidosSet = new Set(r ? JSON.parse(r) : []); } catch(e) { lidosSet = new Set(); }
+  }
+  function marcarLido(key, el) {
+    if (!key || lidosSet.has(key)) return;
+    lidosSet.add(key);
+    try { localStorage.setItem('monitor-sp-lidos', JSON.stringify([...lidosSet])); } catch(e) {}
+    if (el) el.classList.add('item-lido');
+    const colId = el?.dataset?.col;
+    if (colId) atualizarBadgeNaoLidos(colId);
+  }
+  function atualizarBadgeNaoLidos(colId) {
+    const colDef = COLUNAS.find(c => c.colId === colId);
+    if (!colDef) return;
+    const badge = document.getElementById(`nao-lidos-${colId}`);
+    if (!badge) return;
+    const items = document.querySelectorAll(`#${colDef.container} .item`);
+    const n = [...items].filter(el => !lidosSet.has(el.dataset.key)).length;
+    badge.textContent = n;
+    badge.style.display = n > 0 ? 'inline-block' : 'none';
+  }
+
+  // ==============================
+  // FAVORITOS
+  // ==============================
+  function inicializarFavoritos() {
+    try { const r = localStorage.getItem('monitor-sp-favoritos'); favoritosArr = r ? JSON.parse(r) : []; } catch(e) { favoritosArr = []; }
+  }
+  function estaFavorito(key) { return favoritosArr.some(f => (f.link || f.titulo || '').trim() === key); }
+  function salvarFavoritos() { try { localStorage.setItem('monitor-sp-favoritos', JSON.stringify(favoritosArr)); } catch(e) {} }
+  function toggleFavorito(key, starBtn, itemEl, itemData) {
+    if (estaFavorito(key)) {
+      favoritosArr = favoritosArr.filter(f => (f.link || f.titulo || '').trim() !== key);
+      salvarFavoritos();
+      document.querySelectorAll('.btn-star').forEach(b => {
+        if (b.dataset.favKey === key) { b.classList.remove('ativo'); b.title = 'Salvar nos favoritos'; }
+      });
+      renderizarFavoritos(); showToast('Removido dos favoritos');
+    } else {
+      favoritosArr.push({ ...itemData, savedAt: new Date().toISOString() });
+      salvarFavoritos();
+      document.querySelectorAll('.btn-star').forEach(b => {
+        if (b.dataset.favKey === key) { b.classList.add('ativo'); b.title = 'Remover dos favoritos'; }
+      });
+      renderizarFavoritos(); showToast('Salvo nos favoritos ★');
+    }
+  }
+  function renderizarFavoritos() {
+    const container = document.getElementById('favoritos-container');
+    if (!container) return;
+    container.innerHTML = '';
+    if (favoritosArr.length === 0) {
+      container.innerHTML = '<div class="estado">Nenhum favorito ainda.<br><small style="opacity:0.6">Clique em ★ em qualquer item.</small></div>';
+      document.getElementById('count-favoritos').textContent = '—';
+      return;
+    }
+    [...favoritosArr].reverse().forEach(saved => {
+      const div = criarItem({ ...saved, colId: 'col-favoritos', sourceColId: saved.colId });
+      if (saved.colId && NOME_COL[saved.colId]) {
+        const tag = document.createElement('div');
+        tag.className = 'fav-fonte-tag';
+        tag.textContent = NOME_COL[saved.colId];
+        div.appendChild(tag);
+      }
+      container.appendChild(div);
+    });
+    document.getElementById('count-favoritos').textContent = favoritosArr.length;
+  }
+
+  // ==============================
+  // CACHE
+  // ==============================
+  function salvarCache(colId, items) {
+    try { localStorage.setItem(`monitor-sp-cache-${colId}`, JSON.stringify({ ts: Date.now(), items })); } catch(e) {}
+  }
+  function carregarCache(colId) {
+    try {
+      const raw = localStorage.getItem(`monitor-sp-cache-${colId}`);
+      if (!raw) return null;
+      const cache = JSON.parse(raw);
+      if (Date.now() - cache.ts > 24 * 60 * 60 * 1000) return null;
+      return cache;
+    } catch(e) { return null; }
+  }
+  function mostrarAvisoCache(container, ts) {
+    const aviso = document.createElement('div');
+    aviso.className = 'cache-aviso';
+    const hora = new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    aviso.innerHTML = `⚠ Cache de ${hora} — sem conexão`;
+    container.appendChild(aviso);
+  }
+  function formatarDataRelativa(isodate) {
+    try {
+      const d = new Date(isodate);
+      if (isNaN(d)) return '';
+      const diff = Date.now() - d.getTime();
+      if (diff < 60000)       return 'agora mesmo';
+      if (diff < 3600000)     return `há ${Math.floor(diff / 60000)}min`;
+      if (diff < 86400000)    return `há ${Math.floor(diff / 3600000)}h`;
+      if (diff < 172800000)   return 'ontem';
+      return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    } catch(e) { return ''; }
+  }
+  function rssItemDate(item) {
+    return new Date(item.querySelector("pubDate")?.textContent || item.querySelector("published")?.textContent || 0);
+  }
+
+  // ==============================
+  // NOTIFICAÇÕES
+  // ==============================
+  function inicializarNotifs() {
+    COLUNAS.forEach(col => {
+      try {
+        const raw = localStorage.getItem(`monitor-sp-vistos-${col.colId}`);
+        itemsConhecidos[col.colId] = new Set(raw ? JSON.parse(raw) : []);
+      } catch(e) { itemsConhecidos[col.colId] = new Set(); }
+    });
+    atualizarBotaoNotif();
+  }
+  function atualizarBotaoNotif() {
+    const btn = document.getElementById('btn-notif');
+    if (!btn || !('Notification' in window)) { if (btn) btn.style.display = 'none'; return; }
+    if (Notification.permission === 'granted')      { btn.textContent = '🔔'; btn.classList.add('ativo'); }
+    else if (Notification.permission === 'denied')  { btn.textContent = '🔇'; btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed'; }
+    else                                            { btn.textContent = '🔕'; btn.classList.remove('ativo'); }
+  }
+  async function toggleNotificacoes() {
+    if (!('Notification' in window)) { showToast('Notificações não suportadas'); return; }
+    if (Notification.permission === 'denied')  { showToast('Bloqueadas — desbloqueie nas configurações do navegador'); return; }
+    if (Notification.permission === 'granted') { showToast('Notificações já estão ativas 🔔'); return; }
+    const perm = await Notification.requestPermission();
+    atualizarBotaoNotif();
+    showToast(perm === 'granted' ? 'Notificações ativadas! 🔔' : 'Permissão negada');
+  }
+  function notificarNovos(colId, links) {
+    const set = itemsConhecidos[colId];
+    if (!set) return;
+    if (set.size === 0) { links.forEach(l => set.add(l)); }
+    else {
+      const novos = links.filter(l => !set.has(l));
+      links.forEach(l => set.add(l));
+      if (novos.length > 0 && !primeiroLoad && Notification.permission === 'granted') {
+        new Notification(`Monitor SP — ${NOME_COL[colId] || colId}`, {
+          body: `${novos.length} novo${novos.length > 1 ? 's itens' : ' item'}`,
+          tag: `monitor-sp-${colId}`
+        });
+      }
+    }
+    try { localStorage.setItem(`monitor-sp-vistos-${colId}`, JSON.stringify([...set])); } catch(e) {}
+  }
+
+  // ==============================
+  // STATUS DE COLUNA
+  // ==============================
+  let colStatus = {};
+  function setColStatus(colId, status) {
+    colStatus[colId] = status;
+    const suffix = colId.replace('col-', '');
+    const icon = document.getElementById(`status-col-${suffix}`);
+    if (!icon) return;
+    if      (status === 'ok')         { icon.textContent = '✓'; icon.style.color = '#4ade80'; }
+    else if (status === 'erro')       { icon.textContent = '✕'; icon.style.color = '#f87171'; }
+    else if (status === 'cache')      { icon.textContent = '⚠'; icon.style.color = '#fbbf24'; }
+    else if (status === 'carregando') { icon.textContent = '…'; icon.style.color = '#fbbf24'; }
+  }
+
+  const TEMPO_REFRESH = 5 * 60 * 1000;
+  let ultimaAtualizacao = null, proximoRefresh = null, countdownInterval = null;
+
+  function atualizarStatusGlobal(modo) {
+    const dot    = document.getElementById('monitor-dot');
+    const status = document.getElementById('monitor-status');
+    if (modo === 'carregando') {
+      dot.className = 'monitor-dot carregando';
+      status.textContent = 'Atualizando fontes...';
+    } else if (modo === 'ok') {
+      dot.className = 'monitor-dot pulsando';
+      const hora = ultimaAtualizacao?.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) || '';
+      status.textContent = `Monitorando SP · atualizado às ${hora}`;
+    } else if (modo === 'erro') {
+      dot.className = 'monitor-dot erro';
+      status.textContent = 'Algumas fontes com erro';
+    }
+  }
+  function atualizarContador() {
+    const el = document.getElementById('monitor-countdown');
+    if (!proximoRefresh) { el.textContent = ''; return; }
+    const diff = Math.max(0, Math.round((proximoRefresh - Date.now()) / 1000));
+    const min = String(Math.floor(diff / 60)).padStart(2, '0');
+    const seg = String(diff % 60).padStart(2, '0');
+    el.textContent = `↻ ${min}:${seg}`;
+  }
+
+  function wrapCarregar(colId, fn) {
+    return async function() {
+      if (colId === 'col-favoritos') { fn(); return; }
+      const col       = document.getElementById(colId);
+      const btnRefresh = document.getElementById(`refresh-${colId}`);
+      if (col) col.classList.add('atualizando');
+      if (btnRefresh) btnRefresh.classList.add('girando');
+      setColStatus(colId, 'carregando');
+      try {
+        await fn();
+        setColStatus(colId, 'ok');
+      } catch(e) {
+        setColStatus(colId, colStatus[colId] === 'cache' ? 'cache' : 'erro');
+      } finally {
+        if (col) col.classList.remove('atualizando');
+        if (btnRefresh) btnRefresh.classList.remove('girando');
+      }
+    };
+  }
+
+  function refreshColuna(colId) {
+    if (colId === 'col-favoritos') { renderizarFavoritos(); return; }
+    const colDef = COLUNAS.find(c => c.colId === colId);
+    if (colDef) wrapCarregar(colId, colDef.fn)();
+  }
+  function refreshManual() {
+    const btn = document.getElementById('btn-refresh-all');
+    btn.classList.add('girando');
+    setTimeout(() => btn.classList.remove('girando'), 800);
+    carregarTodosOsDados();
+  }
+
+  // ==============================
+  // DIÁRIO DO TRANSPORTE
+  // ==============================
+  async function carregarDiario() {
+    const container = document.getElementById("diario-container");
+    const colId = 'col-diario';
+    try {
+      const resp     = await fetch(`${PROXY}?feed=${encodeURIComponent(RSS_DIARIO)}`);
+      const xmlText  = await resp.text();
+      const xml      = new DOMParser().parseFromString(xmlText, "text/xml");
+      const xmlItems = Array.from(xml.querySelectorAll("item")).sort((a,b) => rssItemDate(b) - rssItemDate(a)).slice(0, 30);
+      if (xmlItems.length === 0) { container.innerHTML = '<div class="estado">Nenhum item.</div>'; return; }
+
+      const cacheItems = [];
+      container.innerHTML = "";
+      xmlItems.forEach(item => {
+        const titulo  = (item.querySelector("title")?.textContent || "").replace(/<[^>]*>/g, "").trim();
+        let   linkEl  = item.querySelector("link");
+        const link    = (linkEl?.getAttribute("href") || linkEl?.textContent || "").trim();
+        const isodate = item.querySelector("pubDate")?.textContent || "";
+        let imgUrl = "";
+        const media = item.querySelector("thumbnail") || item.querySelector("content[medium='image']");
+        if (media) imgUrl = media.getAttribute("url") || "";
+        if (!imgUrl) { const encl = item.querySelector("enclosure[type^='image']"); if (encl) imgUrl = encl.getAttribute("url") || ""; }
+        if (!imgUrl) {
+          const match = (item.querySelector("description")?.textContent || "").match(/src=["'](https?:\/\/[^"']+\.(jpg|jpeg|png|webp)[^"']*)/i);
+          if (match) imgUrl = match[1];
+        }
+        const cats      = Array.from(item.querySelectorAll("category")).map(c => c.textContent).filter(Boolean).slice(0,2).join(', ');
+        const extraHtml = cats ? `<div class="fonte">🏷 ${cats}</div>` : '';
+        const data = { titulo, link, isodate, imgUrl, colId, extraHtml };
+        cacheItems.push(data);
+        container.appendChild(criarItem(data));
+      });
+      document.getElementById("count-diario").textContent = cacheItems.length;
+      salvarCache(colId, cacheItems);
+      notificarNovos(colId, cacheItems.map(i => i.link || i.titulo));
+      atualizarBadgeNaoLidos(colId);
+    } catch(e) {
+      const cache = carregarCache(colId);
+      if (cache) {
+        container.innerHTML = '';
+        mostrarAvisoCache(container, cache.ts);
+        cache.items.forEach(data => container.appendChild(criarItem({ ...data, colId })));
+        document.getElementById("count-diario").textContent = cache.items.length;
+        atualizarBadgeNaoLidos(colId); setColStatus(colId, 'cache');
+      } else {
+        container.innerHTML = `<div class="estado">Erro ao carregar.<br><a href="https://diariodotransporte.com.br/" target="_blank" style="color:var(--accent)">🔗 Abrir site</a></div>`;
+      }
+      throw e;
+    }
+  }
+
+  // ==============================
+  // TRENS & METRÔ
+  // ==============================
+  async function carregarTrens() {
+    const container = document.getElementById("trens-container");
+    const colId = 'col-trens';
+    try {
+      const resp     = await fetch(`${PROXY}?feed=${encodeURIComponent("https://www.diretodostrens.com.br/feed/")}`);
+      const xml      = new DOMParser().parseFromString(await resp.text(), "text/xml");
+      const xmlItems = Array.from(xml.querySelectorAll("item")).sort((a,b) => rssItemDate(b) - rssItemDate(a)).slice(0, 20);
+      if (xmlItems.length === 0) throw new Error("Sem itens");
+
+      const cacheItems = [];
+      container.innerHTML = "";
+      const header = document.createElement('div');
+      header.innerHTML = `<a class="painel-card" href="https://www.diretodostrens.com.br/" target="_blank" rel="noopener"><div class="painel-card-titulo">🔴 Ver status ao vivo</div><div class="painel-card-desc">Situação em tempo real de todas as linhas</div><span class="painel-card-tag">Acesso direto</span></a>`;
+      container.appendChild(header);
+
+      xmlItems.forEach(item => {
+        const titulo  = (item.querySelector("title")?.textContent || "").replace(/<[^>]*>/g, "").trim();
+        let   linkEl  = item.querySelector("link");
+        const link    = (linkEl?.getAttribute("href") || linkEl?.textContent || "").trim();
+        const isodate = item.querySelector("pubDate")?.textContent || "";
+        const data = { titulo, link, isodate, colId };
+        cacheItems.push(data);
+        container.appendChild(criarItem(data));
+      });
+      document.getElementById("count-trens").textContent = cacheItems.length;
+      salvarCache(colId, cacheItems);
+      notificarNovos(colId, cacheItems.map(i => i.link || i.titulo));
+      atualizarBadgeNaoLidos(colId);
+    } catch(e) {
+      const cache = carregarCache(colId);
+      if (cache) {
+        container.innerHTML = '';
+        mostrarAvisoCache(container, cache.ts);
+        cache.items.forEach(data => container.appendChild(criarItem({ ...data, colId })));
+        document.getElementById("count-trens").textContent = cache.items.length;
+        setColStatus(colId, 'cache');
+      } else {
+        container.innerHTML = '';
+        [
+          { nome: 'Direto dos Trens — Status ao vivo', url: 'https://www.diretodostrens.com.br/', desc: 'Metrô, CPTM e intermunicipais', tag: 'Status' },
+          { nome: 'ViaQuatro — Linha 4-Amarela',       url: 'https://www.viaquatro.com.br/',      desc: 'Operação da linha 4-Amarela',   tag: 'Metrô' },
+          { nome: 'Metrô SP — Todas as linhas',        url: 'https://www.metro.sp.gov.br/servicos/status.aspx', desc: 'Linhas 1, 2, 3, 5 e 15', tag: 'Metrô' },
+          { nome: 'CPTM — Operação',                   url: 'https://www.cptm.sp.gov.br/',        desc: 'Linhas 7, 8, 9, 10, 11, 12 e 13', tag: 'Trem' },
+        ].forEach(l => {
+          const a = document.createElement('a');
+          a.className = 'painel-card'; a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
+          a.innerHTML = `<div class="painel-card-titulo">${l.nome}</div><div class="painel-card-desc">${l.desc}</div><span class="painel-card-tag">${l.tag}</span>`;
+          container.appendChild(a);
+        });
+        document.getElementById("count-trens").textContent = '4';
+        setColStatus(colId, 'ok'); return;
+      }
+      throw e;
+    }
+  }
+
+  // ==============================
+  // CET, WAZE, MANANCIAIS, ENEL (links estáticos)
+  // ==============================
+  function criarPainelLinks(containerId, countId, colId, links) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    links.forEach(l => {
+      const a = document.createElement('a');
+      a.className = 'painel-card'; a.href = l.url; a.target = '_blank'; a.rel = 'noopener';
+      a.dataset.texto = (l.nome + ' ' + l.desc).toLowerCase(); a.dataset.col = colId;
+      a.innerHTML = `<div class="painel-card-titulo">${l.nome}</div><div class="painel-card-desc">${l.desc}</div><span class="painel-card-tag ${l.cor||''}">${l.tag}</span>`;
+      container.appendChild(a);
+    });
+    document.getElementById(countId).textContent = links.length;
+    setColStatus(colId, 'ok');
+  }
+  async function carregarCET() {
+    criarPainelLinks("cet-container", "count-cet", "col-cet", [
+      { nome: 'Mapa de Trânsito ao Vivo',    url: 'https://www.cetsp.com.br/transito-agora/transito-nas-principais-vias.aspx',        desc: 'Situação em tempo real na cidade de SP',        tag: 'Mapa' },
+      { nome: 'Câmeras ao Vivo — CET',       url: 'https://cameras.cetsp.com.br/',                                                   desc: 'Imagens das câmeras de monitoramento da CET',   tag: 'Câmeras' },
+      { nome: 'Rodízio Municipal',            url: 'https://www.cetsp.com.br/rodizio.aspx',                                           desc: 'Restrição de circulação pelo final de placa',   tag: 'Rodízio' },
+      { nome: 'Multas',                       url: 'https://www.cetsp.com.br/consultas/multas.aspx',                                   desc: 'Consulta de multas de trânsito',                tag: 'Multas' },
+      { nome: 'Zona Azul',                    url: 'https://www.cetsp.com.br/consultas/zona-azul/',                                    desc: 'Estacionamento rotativo pago na cidade de SP',  tag: 'Zona Azul' },
+      { nome: 'Fiscalização Eletrônica',      url: 'https://www.cetsp.com.br/consultas/fiscalizacao-eletronica-do-transito.aspx',      desc: 'Radares, lombadas e pontos de fiscalização',    tag: 'Fiscalização' },
+    ]);
+  }
+  async function carregarWaze() {
+    criarPainelLinks("waze-container", "count-waze", "col-waze", [
+      { nome: 'Waze Live Map — SP',     url: 'https://www.waze.com/pt-BR/live-map/directions?to=ll.23.5505%2C-46.6333', desc: 'Mapa ao vivo com trânsito, acidentes e alertas', tag: 'Ao vivo' },
+      { nome: 'Alertas ativos agora',   url: 'https://www.waze.com/pt-BR/live-map/',                                     desc: 'Lentidão, acidentes e obras da comunidade',    tag: 'Alertas' },
+      { nome: 'Radares e câmeras',      url: 'https://www.waze.com/pt-BR/live-map/',                                     desc: 'Radares fixos e móveis identificados',         tag: 'Radares', cor: 'roxo' },
+      { nome: 'App Waze — Navegação',   url: 'https://www.waze.com/pt-BR/app',                                           desc: 'Rotas com desvios em tempo real',              tag: 'App' },
+    ]);
+  }
+  async function carregarMananciais() {
+    criarPainelLinks("mananciais-container", "count-mananciais", "col-mananciais", [
+      { nome: 'Situação dos Mananciais — SABESP', url: 'https://mananciais.sabesp.com.br/', desc: 'Níveis dos reservatórios em tempo real', tag: 'Ao vivo', cor: 'verde' },
+      { nome: 'Sistema Cantareira',               url: 'https://mananciais.sabesp.com.br/', desc: 'Principal sistema de abastecimento de SP', tag: 'Cantareira', cor: 'verde' },
+      { nome: 'Sistema Alto Tietê',               url: 'https://mananciais.sabesp.com.br/', desc: 'Reservatórios do Alto Tietê', tag: 'Tietê', cor: 'verde' },
+      { nome: 'Sistema Guarapiranga',             url: 'https://mananciais.sabesp.com.br/', desc: 'Represa Guarapiranga e sistemas sul', tag: 'Guarapiranga', cor: 'verde' },
+      { nome: 'SABESP — Portal Oficial',          url: 'https://site.sabesp.com.br/',       desc: 'Portal oficial com dados de abastecimento', tag: 'SABESP' },
+      { nome: 'Defesa Civil SP — Chuvas',         url: 'https://www.defesacivil.sp.gov.br/', desc: 'Alertas de chuva e situação hídrica', tag: 'Defesa Civil' },
+    ]);
+  }
+  async function carregarEnel() {
+    criarPainelLinks("enel-container", "count-enel", "col-enel", [
+      { nome: 'ENEL SP — Falta de Energia',    url: 'https://www.enel.com.br/pt-saopaulo/Informativos/mapa-falta-de-luz.html', desc: 'Informe ou consulte ocorrências de falta de luz', tag: 'Ocorrências' },
+      { nome: 'Mapa de Ocorrências ENEL',      url: 'https://www.enel.com.br/pt-saopaulo/Informativos/mapa-falta-de-luz.html', desc: 'Regiões com interrupção de fornecimento',        tag: 'Mapa' },
+      { nome: 'Previsão de Restabelecimento',  url: 'https://www.enel.com.br/pt-saopaulo/Informativos/mapa-falta-de-luz.html', desc: 'Previsão de normalização do fornecimento',       tag: 'Previsão' },
+      { nome: 'Central ENEL — 0800 722 7370',  url: 'https://www.enel.com.br/',                                       desc: 'Atendimento 24h ou pelo app ENEL',              tag: 'Contato' },
+      { nome: 'App ENEL SP',                   url: 'https://www.enel.com.br/pt-cesp/suporte/app-enel.html',          desc: 'Gerencie sua conta e reporte ocorrências',     tag: 'App' },
+    ]);
+  }
+
+  // ==============================
+  // CLIMA
+  // ==============================
+  async function carregarClima() {
+    const container = document.getElementById("clima-container");
+    const colId = 'col-clima';
+    container.innerHTML = '<div class="clima-loading">Carregando previsão...</div>';
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=-23.5505&longitude=-46.6333&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode&current_weather=true&timezone=America%2FSao_Paulo&forecast_days=15`;
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('Clima indisponível');
+      const dados = await resp.json();
+
+      const codeToEmoji = c => [0].includes(c)?'☀️':[1,2].includes(c)?'🌤️':c===3?'☁️':[45,48].includes(c)?'🌫️':[51,53,55,61,63,65].includes(c)?'🌧️':[80,81,82].includes(c)?'🌦️':[95,96,99].includes(c)?'⛈️':'🌡️';
+      const codeToDesc  = c => c===0?'Céu limpo':[1,2].includes(c)?'Parc. nublado':c===3?'Nublado':[45,48].includes(c)?'Neblina':[51,53,55].includes(c)?'Garoa':[61,63,65].includes(c)?'Chuva':[80,81,82].includes(c)?'Chuva passageira':[95,96,99].includes(c)?'Tempestade':'Variável';
+      const diaSemana   = (dateStr, i) => i===0?'Hoje':i===1?'Amanhã':new Date(dateStr+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short'}).replace('.','');
+
+      const current = dados.current_weather;
+      const daily   = dados.daily;
+      const n = Math.min(15, daily.time.length);
+      container.innerHTML = '';
+
+      const agora = document.createElement('div');
+      agora.style.cssText = 'padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;';
+      agora.innerHTML = `
+        <span style="font-size:26px;">${codeToEmoji(current.weathercode)}</span>
+        <div>
+          <div style="font-size:20px;font-weight:700;color:var(--text-main);line-height:1;">${Math.round(current.temperature)}°C</div>
+          <div style="font-size:10px;color:var(--text-muted);">${codeToDesc(current.weathercode)} · ${Math.round(current.windspeed)} km/h</div>
+        </div>`;
+      container.appendChild(agora);
+
+      for (let i = 0; i < n; i++) {
+        const div = document.createElement('div');
+        div.className = 'clima-dia';
+        div.innerHTML = `
+          <span class="clima-dia-nome">${diaSemana(daily.time[i], i)}</span>
+          <span class="clima-dia-emoji">${codeToEmoji(daily.weathercode[i])}</span>
+          <span style="font-size:10px;color:var(--text-muted);flex:1;text-align:center;">${codeToDesc(daily.weathercode[i])}</span>
+          <span class="clima-dia-temp">${Math.round(daily.temperature_2m_max[i])}°/${Math.round(daily.temperature_2m_min[i])}° · ${daily.precipitation_probability_max[i]}%💧</span>`;
+        container.appendChild(div);
+      }
+      document.getElementById("count-clima").textContent = n + ' dias';
+      setColStatus(colId, 'ok');
+    } catch(e) {
+      container.innerHTML = `<div class="estado">Erro ao carregar clima.<br><a href="https://weather.com/pt-BR/weather/today/l/-23.5505,-46.6333" target="_blank" style="color:var(--accent)">🔗 Ver previsão</a></div>`;
+      throw e;
+    }
+  }
+
+  // ==============================
+  // SPTRANS — ÔNIBUS
+  // ==============================
+  async function carregarSPTrans() {
+    const container = document.getElementById("sptrans-container");
+    const colId = 'col-sptrans';
+    const RSS_SPTRANS = 'https://www.sptrans.com.br/feed/';
+    try {
+      const resp = await fetch(`${PROXY}?feed=${encodeURIComponent(RSS_SPTRANS)}`);
+      const xmlText = await resp.text();
+      const xml = new DOMParser().parseFromString(xmlText, "text/xml");
+      const xmlItems = Array.from(xml.querySelectorAll("item")).sort((a,b) => rssItemDate(b) - rssItemDate(a)).slice(0, 25);
+      if (xmlItems.length === 0) throw new Error('sem itens');
+
+      const cacheItems = [];
+      container.innerHTML = "";
+      xmlItems.forEach(item => {
+        const titulo  = (item.querySelector("title")?.textContent || "").replace(/<[^>]*>/g, "").trim();
+        let linkEl = item.querySelector("link");
+        const link = (linkEl?.getAttribute("href") || linkEl?.textContent || "").trim();
+        const isodate = item.querySelector("pubDate")?.textContent || "";
+        let imgUrl = "";
+        const media = item.querySelector("thumbnail") || item.querySelector("content[medium='image']");
+        if (media) imgUrl = media.getAttribute("url") || "";
+        if (!imgUrl) { const encl = item.querySelector("enclosure[type^='image']"); if (encl) imgUrl = encl.getAttribute("url") || ""; }
+        const data = { titulo, link, isodate, imgUrl, colId, extraHtml: '' };
+        cacheItems.push(data);
+        container.appendChild(criarItem(data));
+      });
+      document.getElementById("count-sptrans").textContent = cacheItems.length;
+      salvarCache(colId, cacheItems);
+      notificarNovos(colId, cacheItems.map(i => i.link || i.titulo));
+      atualizarBadgeNaoLidos(colId);
+    } catch(e) {
+      const cache = carregarCache(colId);
+      if (cache) {
+        container.innerHTML = '';
+        mostrarAvisoCache(container, cache.ts);
+        cache.items.forEach(data => container.appendChild(criarItem({ ...data, colId })));
+        document.getElementById("count-sptrans").textContent = cache.items.length;
+        atualizarBadgeNaoLidos(colId); setColStatus(colId, 'cache');
+      } else {
+        criarPainelLinks("sptrans-container", "count-sptrans", colId, [
+          { nome: 'OlhoVivo — Ônibus ao Vivo',   url: 'https://olhovivo.sptrans.com.br/#sp?cat=DeOlhoNaVia',    desc: 'Posição dos ônibus em tempo real',        tag: 'Ao vivo' },
+          { nome: 'Portal SPTrans',               url: 'https://www.sptrans.com.br/',              desc: 'Notícias, linhas e informações',           tag: 'Portal' },
+          { nome: 'Bilhete Único — Saldo',        url: 'https://www.sptrans.com.br/bilhete-unico/', desc: 'Saldo, extrato e segunda via',           tag: 'Bilhete Único' },
+          { nome: 'Terminais de Ônibus',          url: 'https://www.sptrans.com.br/terminais/',   desc: 'Mapa dos terminais municipais',           tag: 'Terminais' },
+          { nome: 'Linhas e Itinerários',         url: 'https://www.sptrans.com.br/linhas/',      desc: 'Rotas, horários e pontos de parada',      tag: 'Linhas' },
+        ]);
+        setColStatus(colId, 'ok');
+      }
+      throw e;
+    }
+  }
+
+  // ==============================
+  // VOOS AO VIVO — FLIGHTRADAR24
+  // ==============================
+  function carregarVoos() {
+    const container = document.getElementById("voos-container");
+    const sem = document.getElementById("sem-voos");
+    const count = document.getElementById("count-voos");
+    if (!container) return;
+    const url = 'https://www.flightradar24.com/?lat=-23.43&lng=-46.47&z=9';
+    container.innerHTML = `
+      <a href="${url}" target="_blank" rel="noopener"
+         style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-decoration:none;color:inherit;padding:32px 16px;min-height:200px;background:linear-gradient(135deg,#0a0e27 0%,#0d1b3e 60%,#0a2a4a 100%);">
+        <div style="font-size:56px;line-height:1;">✈️</div>
+        <div style="text-align:center;">
+          <div style="color:#fff;font-size:15px;font-weight:700;margin-bottom:6px;">Flightradar24 — São Paulo</div>
+          <div style="color:#7ec8e3;font-size:12px;">Voos em tempo real sobre GRU / CGH</div>
+        </div>
+        <div style="background:#f97316;color:#fff;font-size:12px;font-weight:700;padding:8px 20px;border-radius:20px;">
+          Abrir mapa ao vivo →
+        </div>
+      </a>`;
+    if (sem) sem.style.display = 'none';
+    if (count) count.textContent = '✈️';
+    setColStatus('col-voos', 'ok');
+  }
+
+  // ==============================
+  // RADAR DE CHUVA — WINDY
+  // ==============================
+  function carregarTV() {
+    const container = document.getElementById("tv-container");
+    const sem = document.getElementById("sem-tv");
+    const count = document.getElementById("count-tv");
+    if (!container) return;
+    container.innerHTML = `<iframe
+      src="https://embed.windy.com/embed2.html?lat=-23.55&lon=-46.63&zoom=9&level=surface&overlay=rain&product=ecmwf&menu=&message=&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1"
+      width="100%" height="280"
+      style="border:0;display:block;"
+      title="Radar de Chuva — Windy"></iframe>`;
+    if (sem) sem.style.display = 'none';
+    if (count) count.textContent = '🌧️';
+    setColStatus('col-tv', 'ok');
+  }
+
+  // ==============================
+  // G1 SÃO PAULO (RSS)
+  // ==============================
+  async function carregarG1() {
+    const container = document.getElementById("g1-container");
+    const colId = 'col-g1';
+    const RSS_G1 = 'https://g1.globo.com/rss/g1/sp/sao-paulo/';
+    try {
+      const resp = await fetch(`${PROXY}?feed=${encodeURIComponent(RSS_G1)}`);
+      const xmlText = await resp.text();
+      const xml = new DOMParser().parseFromString(xmlText, "text/xml");
+      const xmlItems = Array.from(xml.querySelectorAll("item")).sort((a,b) => rssItemDate(b) - rssItemDate(a)).slice(0, 30);
+      if (xmlItems.length === 0) throw new Error('sem itens');
+
+      const cacheItems = [];
+      container.innerHTML = "";
+      xmlItems.forEach(item => {
+        const titulo = (item.querySelector("title")?.textContent || "").replace(/<[^>]*>/g, "").trim();
+        let linkEl = item.querySelector("link");
+        const link = (linkEl?.getAttribute("href") || linkEl?.textContent || "").trim();
+        const isodate = item.querySelector("pubDate")?.textContent || "";
+        const thumb = item.querySelector("media\\:thumbnail, thumbnail")?.getAttribute("url") || "";
+        const data = { titulo, link, isodate, imgUrl: thumb, colId, extraHtml: '' };
+        cacheItems.push(data);
+        container.appendChild(criarItem(data));
+      });
+      document.getElementById("count-g1").textContent = cacheItems.length;
+      salvarCache(colId, cacheItems);
+      notificarNovos(colId, cacheItems.map(i => i.link || i.titulo));
+      atualizarBadgeNaoLidos(colId);
+    } catch(e) {
+      const cache = carregarCache(colId);
+      if (cache) {
+        container.innerHTML = '';
+        mostrarAvisoCache(container, cache.ts);
+        cache.items.forEach(data => container.appendChild(criarItem({ ...data, colId })));
+        document.getElementById("count-g1").textContent = cache.items.length;
+        atualizarBadgeNaoLidos(colId);
+        setColStatus(colId, 'cache');
+      } else {
+        document.getElementById("sem-g1").textContent = 'Não foi possível carregar o G1 SP.';
+        document.getElementById("sem-g1").style.display = '';
+        setColStatus(colId, 'erro');
+      }
+      throw e;
+    }
+  }
+
+  // ==============================
+  // ASSEMBLEIA LEGISLATIVA SP (RSS)
+  // ==============================
+  async function carregarAssembleia() {
+    const container = document.getElementById("assembleia-container");
+    const colId = 'col-assembleia';
+    const RSS_AL = 'http://www.al.sp.gov.br/geral/rss/rss.jsp';
+    try {
+      const resp = await fetch(`${PROXY}?feed=${encodeURIComponent(RSS_AL)}`);
+      const xmlText = await resp.text();
+      const xml = new DOMParser().parseFromString(xmlText, "text/xml");
+      const xmlItems = Array.from(xml.querySelectorAll("item")).sort((a,b) => rssItemDate(b) - rssItemDate(a)).slice(0, 30);
+      if (xmlItems.length === 0) throw new Error('sem itens');
+      const cacheItems = [];
+      container.innerHTML = "";
+      xmlItems.forEach(item => {
+        const titulo  = (item.querySelector("title")?.textContent || "").replace(/<[^>]*>/g, "").trim();
+        let linkEl = item.querySelector("link");
+        const link = (linkEl?.getAttribute("href") || linkEl?.textContent || "").trim();
+        const isodate = item.querySelector("pubDate")?.textContent || "";
+        const cats = Array.from(item.querySelectorAll("category")).map(c => c.textContent).filter(Boolean).slice(0,2).join(', ');
+        const extraHtml = cats ? `<div class="fonte">🏷 ${cats}</div>` : '';
+        const data = { titulo, link, isodate, imgUrl: '', colId, extraHtml };
+        cacheItems.push(data);
+        container.appendChild(criarItem(data));
+      });
+      document.getElementById("count-assembleia").textContent = cacheItems.length;
+      salvarCache(colId, cacheItems);
+      notificarNovos(colId, cacheItems.map(i => i.link || i.titulo));
+      atualizarBadgeNaoLidos(colId);
+    } catch(e) {
+      const cache = carregarCache(colId);
+      if (cache) {
+        container.innerHTML = '';
+        mostrarAvisoCache(container, cache.ts);
+        cache.items.forEach(data => container.appendChild(criarItem({ ...data, colId })));
+        document.getElementById("count-assembleia").textContent = cache.items.length;
+        atualizarBadgeNaoLidos(colId); setColStatus(colId, 'cache');
+      } else {
+        criarPainelLinks("assembleia-container", "count-assembleia", colId, [
+          { nome: 'AL-SP — Portal Oficial',    url: 'https://www.al.sp.gov.br/',                 desc: 'Assembleia Legislativa do Estado de SP',         tag: 'Portal' },
+          { nome: 'Notícias',                  url: 'https://www.al.sp.gov.br/noticia/',          desc: 'Cobertura das sessões, votações e eventos',      tag: 'Notícias' },
+          { nome: 'Ordem do Dia — Pauta',      url: 'https://www.al.sp.gov.br/ordem-do-dia/',    desc: 'Projetos de lei em votação',                     tag: 'Pauta' },
+          { nome: 'Deputados Estaduais',        url: 'https://www.al.sp.gov.br/deputados/',       desc: '94 deputados eleitos para a legislatura',        tag: 'Deputados', cor: 'roxo' },
+          { nome: 'Legislação Estadual',        url: 'https://www.al.sp.gov.br/legislacao/',      desc: 'Leis estaduais, decretos e atos normativos',     tag: 'Legislação', cor: 'roxo' },
+        ]);
+        setColStatus(colId, 'ok');
+      }
+      throw e;
+    }
+  }
+
+  // ==============================
+  // CÂMARA MUNICIPAL SP
+  // ==============================
+  async function carregarCamara() {
+    const container = document.getElementById("camara-container");
+    const colId = 'col-camara';
+    const RSS_CAMARA = 'https://www.saopaulo.sp.leg.br/feed/';
+    try {
+      const resp = await fetch(`${PROXY}?feed=${encodeURIComponent(RSS_CAMARA)}`);
+      const xmlText = await resp.text();
+      const xml = new DOMParser().parseFromString(xmlText, "text/xml");
+      const xmlItems = Array.from(xml.querySelectorAll("item")).sort((a,b) => rssItemDate(b) - rssItemDate(a)).slice(0, 30);
+      if (xmlItems.length === 0) throw new Error('sem itens');
+      const cacheItems = [];
+      container.innerHTML = "";
+      xmlItems.forEach(item => {
+        const titulo  = (item.querySelector("title")?.textContent || "").replace(/<[^>]*>/g, "").trim();
+        let linkEl = item.querySelector("link");
+        const link = (linkEl?.getAttribute("href") || linkEl?.textContent || "").trim();
+        const isodate = item.querySelector("pubDate")?.textContent || "";
+        const cats = Array.from(item.querySelectorAll("category")).map(c => c.textContent).filter(Boolean).slice(0,2).join(', ');
+        const extraHtml = cats ? `<div class="fonte">🏷 ${cats}</div>` : '';
+        const data = { titulo, link, isodate, imgUrl: '', colId, extraHtml };
+        cacheItems.push(data);
+        container.appendChild(criarItem(data));
+      });
+      document.getElementById("count-camara").textContent = cacheItems.length;
+      salvarCache(colId, cacheItems);
+      notificarNovos(colId, cacheItems.map(i => i.link || i.titulo));
+      atualizarBadgeNaoLidos(colId);
+    } catch(e) {
+      const cache = carregarCache(colId);
+      if (cache) {
+        container.innerHTML = '';
+        mostrarAvisoCache(container, cache.ts);
+        cache.items.forEach(data => container.appendChild(criarItem({ ...data, colId })));
+        document.getElementById("count-camara").textContent = cache.items.length;
+        atualizarBadgeNaoLidos(colId); setColStatus(colId, 'cache');
+      } else {
+        criarPainelLinks("camara-container", "count-camara", colId, [
+          { nome: 'Câmara Municipal SP',        url: 'https://www.saopaulo.sp.leg.br/',                  desc: 'Portal oficial da Câmara Municipal de SP',       tag: 'Portal' },
+          { nome: 'Notícias',                   url: 'https://www.saopaulo.sp.leg.br/noticias/',         desc: 'Cobertura das sessões, votações e eventos',      tag: 'Notícias' },
+          { nome: 'Pauta da Câmara',            url: 'https://www.saopaulo.sp.leg.br/pauta/',            desc: 'Projetos em votação e ordem do dia',             tag: 'Pauta' },
+          { nome: 'Vereadores',                 url: 'https://www.saopaulo.sp.leg.br/vereadores/',       desc: '55 vereadores da legislatura atual',             tag: 'Vereadores', cor: 'roxo' },
+          { nome: 'Legislação Municipal',       url: 'https://www.saopaulo.sp.leg.br/legislacao/',       desc: 'Leis municipais, decretos e atos do Executivo',  tag: 'Legislação', cor: 'roxo' },
+          { nome: 'e-Câmara — Participação',    url: 'https://www.saopaulo.sp.leg.br/ecamara/',          desc: 'Portal de transparência e participação cidadã',  tag: 'e-Câmara' },
+        ]);
+        setColStatus(colId, 'ok');
+      }
+      throw e;
+    }
+  }
+
+  // ==============================
+  // QUALIDADE DO AR (Open-Meteo Air Quality)
+  // ==============================
+  async function carregarQualidadeAr() {
+    const container = document.getElementById("ar-container");
+    const colId = 'col-ar';
+    container.innerHTML = '';
+
+    const url = 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=-23.5505&longitude=-46.6333&current=pm10,pm2_5,ozone,nitrogen_dioxide,european_aqi&timezone=America%2FSao_Paulo';
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('API ar indisponível');
+      const d = await resp.json();
+      const c = d.current;
+      const aqi = c.european_aqi;
+
+      const aqiBadge = aqi <= 20  ? { label: 'Bom',              cor: '#27ae60', emoji: '🟢' }
+                     : aqi <= 40  ? { label: 'Razoável',          cor: '#f1c40f', emoji: '🟡' }
+                     : aqi <= 60  ? { label: 'Moderado',          cor: '#e67e22', emoji: '🟠' }
+                     : aqi <= 80  ? { label: 'Ruim',              cor: '#e74c3c', emoji: '🔴' }
+                     : aqi <= 100 ? { label: 'Muito Ruim',        cor: '#8e44ad', emoji: '🟣' }
+                     :              { label: 'Extremamente Ruim', cor: '#7f0000', emoji: '⚫' };
+
+      const sumario = document.createElement('div');
+      sumario.style.cssText = 'padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;';
+      sumario.innerHTML = `
+        <span style="font-size:26px;">${aqiBadge.emoji}</span>
+        <div>
+          <div style="font-size:15px;font-weight:700;color:${aqiBadge.cor};line-height:1;">${aqiBadge.label}</div>
+          <div style="font-size:10px;color:var(--text-muted);">AQI Europeu: ${aqi}</div>
+        </div>`;
+      container.appendChild(sumario);
+
+      [
+        { nome: 'PM2.5', valor: c.pm2_5?.toFixed(1) ?? '—', unidade: 'µg/m³', desc: 'Partículas finas — maior risco' },
+        { nome: 'PM10',  valor: c.pm10?.toFixed(1)  ?? '—', unidade: 'µg/m³', desc: 'Partículas inaláveis grossas' },
+        { nome: 'O₃',    valor: c.ozone?.toFixed(1) ?? '—', unidade: 'µg/m³', desc: 'Ozônio troposférico' },
+        { nome: 'NO₂',   valor: c.nitrogen_dioxide?.toFixed(1) ?? '—', unidade: 'µg/m³', desc: 'Dióxido de nitrogênio' },
+      ].forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'painel-card';
+        div.innerHTML = `<div class="painel-card-titulo">${p.nome} — <strong>${p.valor}</strong> <span style="font-size:10px;color:var(--text-muted);">${p.unidade}</span></div><div class="painel-card-desc">${p.desc}</div>`;
+        container.appendChild(div);
+      });
+
+      const lc = document.createElement('a');
+      lc.className = 'painel-card'; lc.href = 'https://cetesb.sp.gov.br/ar/qualar/'; lc.target = '_blank'; lc.rel = 'noopener';
+      lc.dataset.texto = 'cetesb qualar qualidade do ar são paulo'; lc.dataset.col = colId;
+      lc.innerHTML = `<div class="painel-card-titulo">CETESB QUALAR</div><div class="painel-card-desc">Portal oficial de qualidade do ar em SP</div><span class="painel-card-tag verde">CETESB</span>`;
+      container.appendChild(lc);
+
+      document.getElementById("count-ar").textContent = '4 poluentes';
+      setColStatus(colId, 'ok');
+    } catch(e) {
+      criarPainelLinks("ar-container", "count-ar", colId, [
+        { nome: 'CETESB QUALAR',     url: 'https://cetesb.sp.gov.br/ar/qualar/', desc: 'Portal oficial de qualidade do ar em SP',         tag: 'CETESB', cor: 'verde' },
+        { nome: 'IQAr — Relatórios', url: 'https://cetesb.sp.gov.br/ar/',        desc: 'Boletins e relatórios da qualidade do ar da RMSP', tag: 'Relatórios' },
+      ]);
+      setColStatus(colId, 'ok');
+      throw e;
+    }
+  }
+
+  // ==============================
+  // RODOVIAS SP
+  // ==============================
+  async function carregarRodovias() {
+    criarPainelLinks("rodovias-container", "count-rodovias", "col-rodovias", [
+      { nome: 'CCR AutoBan — Anhanguera / Bandeirantes', url: 'https://rodovias.motiva.com.br/autoban/',              desc: 'SP-330 e SP-348: tráfego ao vivo',               tag: 'AutoBan',   cor: '' },
+      { nome: 'CCR ViaOeste — Castello / Raposo',        url: 'https://rodovias.motiva.com.br/viaoeste/',             desc: 'SP-280 Castello Branco e SP-270 Raposo Tavares', tag: 'ViaOeste',  cor: '' },
+      { nome: 'CCR Rodoanel',                            url: 'https://rodovias.motiva.com.br/rodoanel/',             desc: 'Anel viário metropolitano de São Paulo',         tag: 'Rodoanel',  cor: '' },
+      { nome: 'CCR RioSP — Via Dutra (BR-116)',          url: 'https://rodovias.motiva.com.br/riosp/',                desc: 'BR-116 SP–RJ e BR-101 Rio-Santos',              tag: 'Via Dutra', cor: '' },
+      { nome: 'Ecovias — Anchieta / Imigrantes',         url: 'https://www.ecovias.com.br/',                         desc: 'SP-150 e SP-160 — corredor para o litoral',     tag: 'Ecovias',   cor: 'verde' },
+      { nome: 'Arteris Régis Bittencourt (BR-116 Sul)',  url: 'https://www.arteris.com.br/nossas-rodovias/regis-bittencourt/', desc: 'BR-116 sentido Curitiba',            tag: 'Régis',     cor: '' },
+      { nome: 'DER-SP — Rodovias Estaduais',             url: 'https://www.der.sp.gov.br/',                          desc: 'Rodovias estaduais não concedidas',             tag: 'DER-SP',    cor: 'roxo' },
+    ]);
+  }
+
+  // ==============================
+  // CARREGAR TUDO
+  // ==============================
+  async function carregarTodosOsDados() {
+    atualizarStatusGlobal('carregando');
+    await Promise.allSettled(COLUNAS.filter(c => !c.local).map(c => wrapCarregar(c.colId, c.fn)()));
+    ultimaAtualizacao = new Date();
+    proximoRefresh    = Date.now() + TEMPO_REFRESH;
+    atualizarStatusGlobal('ok');
+    primeiroLoad = false;
+    clearInterval(countdownInterval);
+    countdownInterval = setInterval(atualizarContador, 1000);
+    atualizarContador();
+  }
+
+  // ==============================
+  // TOGGLE PAINEL (mostrar/ocultar)
+  // ==============================
+  function togglePainel(btn) {
+    const colId = btn.dataset.col;
+    const painel = document.getElementById(colId);
+    if (!painel) return;
+    const ativo = btn.classList.contains('ativo');
+    btn.classList.toggle('ativo', !ativo);
+    painel.classList.toggle('col-oculta', ativo);
+    salvarEstadoPaineis();
+  }
+  function setupExpandButtons() {
+    document.querySelectorAll('.painel[id]').forEach(col => {
+      const header = col.querySelector('.painel-header');
+      if (!header) return;
+      const controls = header.querySelector('.painel-meta');
+      if (!controls) return;
+      const btn = document.createElement('button');
+      btn.className = 'btn-col-expand';
+      btn.id = 'expand-' + col.id;
+      btn.title = 'Expandir painel';
+      btn.textContent = '⊕';
+      btn.onclick = () => toggleExpandir(col.id);
+      controls.insertBefore(btn, controls.firstChild);
+    });
+  }
+
+  function toggleExpandir(colId) {
+    const col = document.getElementById(colId);
+    if (!col) return;
+    const expandida = col.classList.toggle('col-expandida');
+    const btn = document.getElementById('expand-' + colId);
+    if (btn) {
+      btn.textContent = expandida ? '⊖' : '⊕';
+      btn.title = expandida ? 'Reduzir painel' : 'Expandir painel';
+      btn.classList.toggle('ativo', expandida);
+    }
+    salvarExpandidas();
+  }
+
+  function salvarExpandidas() {
+    const expandidas = [...document.querySelectorAll('.painel.col-expandida[id]')].map(c => c.id);
+    try { localStorage.setItem('monitor-sp-vertical-expandidas', JSON.stringify(expandidas)); } catch(e) {}
+  }
+
+  function restaurarExpandidas() {
+    try {
+      const raw = localStorage.getItem('monitor-sp-vertical-expandidas');
+      if (!raw) return;
+      JSON.parse(raw).forEach(id => {
+        const col = document.getElementById(id);
+        if (!col) return;
+        col.classList.add('col-expandida');
+        const btn = document.getElementById('expand-' + id);
+        if (btn) { btn.textContent = '⊖'; btn.title = 'Reduzir painel'; btn.classList.add('ativo'); }
+      });
+    } catch(e) {}
+  }
+
+  function salvarEstadoPaineis() {
+    const estado = {};
+    document.querySelectorAll('.toggle-painel-btn[data-col]').forEach(b => { estado[b.dataset.col] = b.classList.contains('ativo'); });
+    try { localStorage.setItem('monitor-sp-vertical-paineis', JSON.stringify(estado)); } catch(e) {}
+  }
+  function restaurarEstadoPaineis() {
+    try {
+      const raw = localStorage.getItem('monitor-sp-vertical-paineis');
+      if (!raw) return;
+      const estado = JSON.parse(raw);
+      document.querySelectorAll('.toggle-painel-btn[data-col]').forEach(btn => {
+        const colId  = btn.dataset.col;
+        const painel = document.getElementById(colId);
+        if (!painel) return;
+        if (estado[colId] === false) { btn.classList.remove('ativo'); painel.classList.add('col-oculta'); }
+      });
+    } catch(e) {}
+  }
+
+  function salvarOrdemPaineis() {
+    const grade = document.getElementById('grade');
+    const ordem = [...grade.querySelectorAll('.painel[id]')].map(p => p.id);
+    try { localStorage.setItem('monitor-sp-vertical-ordem-paineis', JSON.stringify(ordem)); } catch(e) {}
+  }
+
+  function restaurarOrdemPaineis() {
+    try {
+      const raw = localStorage.getItem('monitor-sp-vertical-ordem-paineis');
+      if (!raw) return;
+      const ordem = JSON.parse(raw);
+      const grade = document.getElementById('grade');
+      const bar = document.getElementById('toggle-bar');
+      ordem.forEach(id => {
+        const painel = document.getElementById(id);
+        if (painel) grade.appendChild(painel);
+        const btn = bar.querySelector(`.toggle-painel-btn[data-col="${id}"]`);
+        if (btn) bar.appendChild(btn);
+      });
+    } catch(e) {}
+  }
+
+  // ==============================
+  // MINIMIZAR PAINEL
+  // ==============================
+  function toggleMinimizar(colId) {
+    const painel = document.getElementById(colId);
+    if (painel) painel.classList.toggle('minimizado');
+  }
+
+  // ==============================
+  // DRAG & DROP (reordenar painéis na grade)
+  // ==============================
+  let dragSrc = null;
+  function setupDragDrop() {
+    const grade = document.getElementById('grade');
+    grade.querySelectorAll('.painel[draggable]').forEach(p => {
+      p.addEventListener('dragstart', e => {
+        dragSrc = p; p.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      p.addEventListener('dragend', () => {
+        p.classList.remove('dragging');
+        grade.querySelectorAll('.painel').forEach(c => c.classList.remove('drag-over'));
+        dragSrc = null;
+      });
+      p.addEventListener('dragover', e => {
+        e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+        if (p !== dragSrc) p.classList.add('drag-over');
+      });
+      p.addEventListener('dragleave', () => p.classList.remove('drag-over'));
+      p.addEventListener('drop', e => {
+        e.preventDefault();
+        p.classList.remove('drag-over');
+        if (dragSrc && dragSrc !== p) {
+          const paineis  = [...grade.querySelectorAll('.painel')];
+          const srcIdx   = paineis.indexOf(dragSrc);
+          const tgtIdx   = paineis.indexOf(p);
+          if (srcIdx < tgtIdx) grade.insertBefore(dragSrc, p.nextSibling);
+          else                 grade.insertBefore(dragSrc, p);
+          salvarOrdemPaineis();
+        }
+      });
+
+      // duplo clique no header minimiza
+      const header = p.querySelector('.painel-header');
+      if (header) header.addEventListener('dblclick', () => p.classList.toggle('minimizado'));
+    });
+  }
+
+  // ==============================
+  // TOGGLE BAR — drag para reordenar painéis
+  // ==============================
+  function setupToggleBarDrag() {
+    const bar = document.getElementById('toggle-bar');
+    const grade = document.getElementById('grade');
+    let dragBtn = null;
+    bar.querySelectorAll('.toggle-painel-btn[data-col]').forEach(btn => {
+      btn.setAttribute('draggable', 'true');
+      btn.addEventListener('dragstart', e => {
+        dragBtn = btn;
+        setTimeout(() => btn.classList.add('dragging-btn'), 0);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', btn.dataset.col);
+      });
+      btn.addEventListener('dragend', () => {
+        btn.classList.remove('dragging-btn');
+        bar.querySelectorAll('.toggle-painel-btn').forEach(b => b.classList.remove('drag-over-btn'));
+        dragBtn = null;
+      });
+      btn.addEventListener('dragover', e => {
+        e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+        if (dragBtn && btn !== dragBtn) btn.classList.add('drag-over-btn');
+      });
+      btn.addEventListener('dragleave', () => btn.classList.remove('drag-over-btn'));
+      btn.addEventListener('drop', e => {
+        e.preventDefault();
+        btn.classList.remove('drag-over-btn');
+        if (!dragBtn || dragBtn === btn) return;
+        const btns = [...bar.querySelectorAll('.toggle-painel-btn[data-col]')];
+        const srcIdx = btns.indexOf(dragBtn);
+        const tgtIdx = btns.indexOf(btn);
+        if (srcIdx < tgtIdx) bar.insertBefore(dragBtn, btn.nextSibling);
+        else bar.insertBefore(dragBtn, btn);
+        const srcPainel = document.getElementById(dragBtn.dataset.col);
+        const tgtPainel = document.getElementById(btn.dataset.col);
+        if (srcPainel && tgtPainel) {
+          if (srcIdx < tgtIdx) grade.insertBefore(srcPainel, tgtPainel.nextSibling);
+          else grade.insertBefore(srcPainel, tgtPainel);
+        }
+        salvarOrdemPaineis();
+      });
+    });
+  }
+
+  // ==============================
+  // TEMA
+  // ==============================
+  function toggleTema() {
+    const isDark = document.body.classList.toggle('dark-theme');
+    const btn = document.getElementById('btn-theme');
+    btn.textContent = isDark ? '☀️ Claro' : '🌙 Escuro';
+    try { localStorage.setItem('monitor-sp-vertical-tema', isDark ? 'dark' : 'light'); } catch(e) {}
+  }
+  function inicializarTema() {
+    const saved = localStorage.getItem('monitor-sp-vertical-tema');
+    const dark  = saved === 'dark' || (!saved);   // dark por padrão nesta versão
+    const btn   = document.getElementById('btn-theme');
+    if (dark) { document.body.classList.add('dark-theme'); btn.textContent = '☀️ Claro'; }
+    else      { btn.textContent = '🌙 Escuro'; }
+  }
+
+  // ==============================
+  // CONFIG / LAYOUT
+  // ==============================
+  function toggleConfig() {
+    const panel = document.getElementById('config-panel');
+    const btn   = document.getElementById('btn-config');
+    panel.classList.toggle('aberto');
+    btn.classList.toggle('aberto');
+  }
+  function aplicarConfig(btn) {
+    const tipo = btn.dataset.config;
+    const val  = btn.dataset.val;
+    document.querySelectorAll(`.config-btn[data-config="${tipo}"]`).forEach(b => b.classList.remove('ativo'));
+    btn.classList.add('ativo');
+
+    if (tipo === 'colunas') {
+      document.getElementById('grade').classList.toggle('uma-coluna', val === '1');
+    } else if (tipo === 'densidade') {
+      const map = { compacto: ['6px','8px','11px','10px'], normal: ['9px','12px','13px','11px'], espaçoso: ['13px','16px','14px','12px'] };
+      const [pv, ph, fl, fm] = map[val] || map['normal'];
+      const r = document.documentElement.style;
+      r.setProperty('--item-pv', pv); r.setProperty('--item-ph', ph);
+      r.setProperty('--font-link', fl); r.setProperty('--font-meta', fm);
+    } else if (tipo === 'fonte') {
+      const map = { P: ['11px','10px'], M: ['13px','11px'], G: ['15px','12px'] };
+      const [fl, fm] = map[val] || map['M'];
+      document.documentElement.style.setProperty('--font-link', fl);
+      document.documentElement.style.setProperty('--font-meta', fm);
+    }
+    try { localStorage.setItem(`monitor-sp-vertical-cfg-${tipo}`, val); } catch(e) {}
+  }
+  function aplicarAltura(val) {
+    document.documentElement.style.setProperty('--panel-h', `calc(${val}vh - 30px)`);
+    document.getElementById('label-altura').textContent = val + 'vh';
+    try { localStorage.setItem('monitor-sp-vertical-cfg-altura', val); } catch(e) {}
+  }
+  function resetarConfig() {
+    aplicarAltura(25); document.getElementById('slider-altura').value = 25;
+    document.getElementById('grade').classList.remove('uma-coluna');
+    const r = document.documentElement.style;
+    r.setProperty('--item-pv', '9px'); r.setProperty('--item-ph', '12px');
+    r.setProperty('--font-link', '13px'); r.setProperty('--font-meta', '11px');
+    ['colunas','densidade','fonte','altura'].forEach(k => { try { localStorage.removeItem(`monitor-sp-vertical-cfg-${k}`); } catch(e) {} });
+    document.querySelectorAll('.config-btn').forEach(b => {
+      const padrao = { colunas: '2', densidade: 'normal', fonte: 'M' };
+      b.classList.toggle('ativo', padrao[b.dataset.config] === b.dataset.val);
+    });
+    showToast('Layout restaurado ↺');
+  }
+  function restaurarConfig() {
+    const alt = localStorage.getItem('monitor-sp-vertical-cfg-altura');
+    if (alt) { aplicarAltura(alt); document.getElementById('slider-altura').value = alt; }
+    ['colunas','densidade','fonte'].forEach(tipo => {
+      try {
+        const val = localStorage.getItem(`monitor-sp-vertical-cfg-${tipo}`);
+        if (val) { const b = document.querySelector(`.config-btn[data-config="${tipo}"][data-val="${val}"]`); if (b) aplicarConfig(b); }
+      } catch(e) {}
+    });
+  }
+
+  // ==============================
+  // FILTROS
+  // ==============================
+  function aplicarFiltros() {
+    termoAtual = document.getElementById('campo-busca').value.trim().toLowerCase();
+    aplicarFiltrosDOM();
+  }
+  function aplicarFiltrosDOM() {
+    const termo = termoAtual;
+    let total = 0;
+    COLUNAS.forEach(col => {
+      const container = document.getElementById(col.container);
+      if (!container) return;
+      let vistos = 0;
+      container.querySelectorAll('.item, .painel-card').forEach(item => {
+        const passa = !termo || (item.dataset.texto || item.textContent || '').toLowerCase().includes(termo);
+        item.classList.toggle('oculto', !passa);
+        if (passa) { vistos++; if (termo) realcarTexto(item, termo); else limparRealce(item); }
+        else limparRealce(item);
+      });
+      total += vistos;
+      const semEl = document.getElementById(col.sem);
+      if (semEl) semEl.classList.toggle('visivel', vistos === 0 && !!termo);
+    });
+    document.getElementById('resultado-info').textContent = termo ? `${total} resultado${total !== 1 ? 's' : ''} para "${termo}"` : '';
+  }
+  function realcarTexto(item, termo) {
+    const a = item.querySelector('a');
+    if (!a) return;
+    const txt = a.dataset.textoOriginal || a.textContent;
+    a.dataset.textoOriginal = txt;
+    a.innerHTML = txt.replace(new RegExp(`(${termo.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<mark>$1</mark>');
+  }
+  function limparRealce(item) {
+    const a = item.querySelector('a');
+    if (!a || !a.dataset.textoOriginal) return;
+    a.textContent = a.dataset.textoOriginal;
+    delete a.dataset.textoOriginal;
+  }
+  function limpar() {
+    document.getElementById('campo-busca').value = '';
+    termoAtual = '';
+    aplicarFiltrosDOM();
+  }
+
+  // ==============================
+  // ATALHOS
+  // ==============================
+  function setupAtalhos() {
+    document.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT') {
+        if (e.key === 'Enter')  aplicarFiltros();
+        if (e.key === 'Escape') limpar();
+        return;
+      }
+      if (e.key === '/' || e.key === 'f') { e.preventDefault(); document.getElementById('campo-busca').focus(); }
+      if (e.key === 'r' || e.key === 'R') refreshManual();
+      if (e.key === 'Escape') limpar();
+    });
+  }
+
+  // ==============================
+  // AUTO-REFRESH
+  // ==============================
+  function iniciarAutoRefresh() {
+    setInterval(() => { if (Date.now() >= proximoRefresh) carregarTodosOsDados(); }, 30000);
+  }
+
+  // ==============================
+  // INICIALIZAÇÃO
+  // ==============================
+  document.addEventListener('DOMContentLoaded', () => {
+    inicializarLidos();
+    inicializarFavoritos();
+    inicializarNotifs();
+    inicializarTema();
+    restaurarConfig();
+    restaurarOrdemPaineis();
+    restaurarEstadoPaineis();
+    setupDragDrop();
+    setupExpandButtons();
+    restaurarExpandidas();
+    setupToggleBarDrag();
+    setupAtalhos();
+    renderizarFavoritos();
+    carregarTodosOsDados();
+    iniciarAutoRefresh();
+  });
+</script>
+</body>
+</html>
