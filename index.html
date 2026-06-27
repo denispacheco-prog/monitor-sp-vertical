@@ -535,22 +535,22 @@
     <button class="btn-scroll-nav" onclick="document.getElementById('grade').scrollTo({top:0,behavior:'smooth'})" title="Ir para o topo">▲▲</button>
     <button class="btn-scroll-nav" onclick="document.getElementById('grade').scrollTo({top:99999,behavior:'smooth'})" title="Ir para o final">▼▼</button>
     <label>Painéis:</label>
-    <button class="toggle-painel-btn tipo-favoritos ativo"  data-col="col-favoritos"   onclick="togglePainel(this)">⭐ Favoritos</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-tv"          onclick="togglePainel(this)">🌧️ Windy</button>
+    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-clima"       onclick="togglePainel(this)">🌦️ Clima</button>
+    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-ar"          onclick="togglePainel(this)">🌫️ Ar</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-g1"          onclick="togglePainel(this)">📰 G1 SP</button>
     <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-diario"      onclick="togglePainel(this)">🚇 Diário</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-assembleia"  onclick="togglePainel(this)">🏛️ AL-SP</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-camara"      onclick="togglePainel(this)">🏙️ Câmara SP</button>
     <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-trens"       onclick="togglePainel(this)">🚉 Trens</button>
     <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-cet"         onclick="togglePainel(this)">🚦 CET</button>
     <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-waze"        onclick="togglePainel(this)">🗺️ Waze</button>
-    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-clima"       onclick="togglePainel(this)">🌦️ Clima</button>
-    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-mananciais"  onclick="togglePainel(this)">💧 Mananciais</button>
-    <button class="toggle-painel-btn tipo-infra ativo"      data-col="col-enel"        onclick="togglePainel(this)">⚡ ENEL</button>
     <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-sptrans"     onclick="togglePainel(this)">🚌 SPTrans</button>
-    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-tv"          onclick="togglePainel(this)">🌧️ Windy</button>
-    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-voos"         onclick="togglePainel(this)">✈️ Voos</button>
-    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-assembleia"  onclick="togglePainel(this)">🏛️ AL-SP</button>
-    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-camara"      onclick="togglePainel(this)">🏙️ Câmara SP</button>
-    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-g1"          onclick="togglePainel(this)">📰 G1 SP</button>
-    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-ar"          onclick="togglePainel(this)">🌫️ Ar</button>
     <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-rodovias"    onclick="togglePainel(this)">🛣️ Rodovias</button>
+    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-voos"        onclick="togglePainel(this)">✈️ Voos</button>
+    <button class="toggle-painel-btn tipo-infra ativo"      data-col="col-enel"        onclick="togglePainel(this)">⚡ ENEL</button>
+    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-mananciais"  onclick="togglePainel(this)">💧 Mananciais</button>
+    <button class="toggle-painel-btn tipo-favoritos"        data-col="col-favoritos"   onclick="togglePainel(this)">⭐ Favoritos</button>
   </div>
 
   <!-- BUSCA -->
@@ -564,17 +564,67 @@
   <!-- GRADE DE PAINÉIS -->
   <div class="grade" id="grade">
 
-    <div class="painel tipo-favoritos" id="col-favoritos" draggable="true">
+    <!-- WINDY — linha 1, largura total -->
+    <div class="painel tipo-noticias col-expandida" id="col-tv" draggable="true">
       <div class="painel-header">
-        <span class="painel-titulo">⭐ Favoritos</span>
+        <span class="painel-titulo">🌧️ Radar de Chuva — Windy <span class="col-status-icon" id="status-col-tv"></span></span>
         <div class="painel-meta">
-          <button class="btn-minimizar" onclick="toggleMinimizar('col-favoritos')" title="Minimizar">▲</button>
-          <span class="painel-count" id="count-favoritos">—</span>
+          <button class="btn-refresh-painel" id="refresh-col-tv" onclick="refreshColuna('col-tv')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-tv')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-tv">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo" style="overflow:hidden;padding:0;">
+        <div id="tv-container"></div>
+        <div id="sem-tv" class="sem-resultado"></div>
+      </div>
+    </div>
+
+    <!-- linha 2: Clima | Qualidade do Ar -->
+    <div class="painel tipo-servicos" id="col-clima" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🌦️ Clima — SP <span class="col-status-icon" id="status-col-clima"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-clima" onclick="refreshColuna('col-clima')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-clima')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-clima">—</span>
         </div>
       </div>
       <div class="painel-corpo">
-        <div id="favoritos-container" class="estado">Nenhum favorito ainda.<br><small style="opacity:0.6">Clique em ★ em qualquer item.</small></div>
-        <div id="sem-favoritos" class="sem-resultado">Nenhum resultado.</div>
+        <div id="clima-container" class="estado">Carregando...</div>
+        <div id="sem-clima" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <div class="painel tipo-servicos" id="col-ar" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🌫️ Qualidade do Ar <span class="col-status-icon" id="status-col-ar"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-ar" onclick="refreshColuna('col-ar')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-ar')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-ar">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="ar-container" class="estado">Carregando...</div>
+        <div id="sem-ar" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <!-- linha 3: G1 | Diário do Transporte -->
+    <div class="painel tipo-noticias" id="col-g1" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">📰 G1 São Paulo <span class="col-status-icon" id="status-col-g1"></span></span>
+        <div class="painel-meta">
+          <span class="badge-nao-lido" id="nao-lidos-col-g1" style="display:none"></span>
+          <button class="btn-refresh-painel" id="refresh-col-g1" onclick="refreshColuna('col-g1')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-g1')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-g1">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="g1-container" class="estado">Carregando...</div>
+        <div id="sem-g1" class="sem-resultado">Nenhum resultado.</div>
       </div>
     </div>
 
@@ -594,6 +644,40 @@
       </div>
     </div>
 
+    <!-- linha 4: Assembleia | Câmara -->
+    <div class="painel tipo-noticias" id="col-assembleia" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🏛️ Assembleia Legislativa SP <span class="col-status-icon" id="status-col-assembleia"></span></span>
+        <div class="painel-meta">
+          <span class="badge-nao-lido" id="nao-lidos-col-assembleia" style="display:none"></span>
+          <button class="btn-refresh-painel" id="refresh-col-assembleia" onclick="refreshColuna('col-assembleia')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-assembleia')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-assembleia">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="assembleia-container" class="estado">Carregando...</div>
+        <div id="sem-assembleia" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <div class="painel tipo-noticias" id="col-camara" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🏙️ Câmara Municipal SP <span class="col-status-icon" id="status-col-camara"></span></span>
+        <div class="painel-meta">
+          <span class="badge-nao-lido" id="nao-lidos-col-camara" style="display:none"></span>
+          <button class="btn-refresh-painel" id="refresh-col-camara" onclick="refreshColuna('col-camara')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-camara')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-camara">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="camara-container" class="estado">Carregando...</div>
+        <div id="sem-camara" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <!-- linha 5: Trens & Metrô | CET-SP -->
     <div class="painel tipo-transporte" id="col-trens" draggable="true">
       <div class="painel-header">
         <span class="painel-titulo">🚉 Trens & Metrô <span class="col-status-icon" id="status-col-trens"></span></span>
@@ -624,6 +708,7 @@
       </div>
     </div>
 
+    <!-- linha 6: Waze | SPTrans -->
     <div class="painel tipo-transporte" id="col-waze" draggable="true">
       <div class="painel-header">
         <span class="painel-titulo">🗺️ Waze <span class="col-status-icon" id="status-col-waze"></span></span>
@@ -639,18 +724,66 @@
       </div>
     </div>
 
-    <div class="painel tipo-servicos" id="col-clima" draggable="true">
+    <div class="painel tipo-transporte" id="col-sptrans" draggable="true">
       <div class="painel-header">
-        <span class="painel-titulo">🌦️ Clima — SP <span class="col-status-icon" id="status-col-clima"></span></span>
+        <span class="painel-titulo">🚌 SPTrans — Ônibus <span class="col-status-icon" id="status-col-sptrans"></span></span>
         <div class="painel-meta">
-          <button class="btn-refresh-painel" id="refresh-col-clima" onclick="refreshColuna('col-clima')" title="Atualizar">↻</button>
-          <button class="btn-minimizar" onclick="toggleMinimizar('col-clima')" title="Minimizar">▲</button>
-          <span class="painel-count" id="count-clima">—</span>
+          <span class="badge-nao-lido" id="nao-lidos-col-sptrans" style="display:none"></span>
+          <button class="btn-refresh-painel" id="refresh-col-sptrans" onclick="refreshColuna('col-sptrans')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-sptrans')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-sptrans">—</span>
         </div>
       </div>
       <div class="painel-corpo">
-        <div id="clima-container" class="estado">Carregando...</div>
-        <div id="sem-clima" class="sem-resultado">Nenhum resultado.</div>
+        <div id="sptrans-container" class="estado">Carregando...</div>
+        <div id="sem-sptrans" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <!-- linha 7: Rodovias | Voos ao Vivo -->
+    <div class="painel tipo-transporte" id="col-rodovias" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">🛣️ Rodovias SP <span class="col-status-icon" id="status-col-rodovias"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-rodovias" onclick="refreshColuna('col-rodovias')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-rodovias')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-rodovias">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="rodovias-container"></div>
+        <div id="sem-rodovias" class="sem-resultado">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <div class="painel tipo-transporte" id="col-voos" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">✈️ Voos ao Vivo — SP <span class="col-status-icon" id="status-col-voos"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-voos" onclick="refreshColuna('col-voos')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-voos')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-voos">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo" style="overflow:hidden;padding:0;">
+        <div id="voos-container"></div>
+        <div id="sem-voos" class="sem-resultado"></div>
+      </div>
+    </div>
+
+    <!-- linha 8: ENEL | Mananciais -->
+    <div class="painel tipo-infra" id="col-enel" draggable="true">
+      <div class="painel-header">
+        <span class="painel-titulo">⚡ ENEL Luz <span class="col-status-icon" id="status-col-enel"></span></span>
+        <div class="painel-meta">
+          <button class="btn-refresh-painel" id="refresh-col-enel" onclick="refreshColuna('col-enel')" title="Atualizar">↻</button>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-enel')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-enel">—</span>
+        </div>
+      </div>
+      <div class="painel-corpo">
+        <div id="enel-container"></div>
+        <div id="sem-enel" class="sem-resultado">Nenhum resultado.</div>
       </div>
     </div>
 
@@ -669,150 +802,18 @@
       </div>
     </div>
 
-    <div class="painel tipo-infra" id="col-enel" draggable="true">
+    <!-- Favoritos — oculto por padrão -->
+    <div class="painel tipo-favoritos col-oculta" id="col-favoritos" draggable="true">
       <div class="painel-header">
-        <span class="painel-titulo">⚡ ENEL Luz <span class="col-status-icon" id="status-col-enel"></span></span>
+        <span class="painel-titulo">⭐ Favoritos</span>
         <div class="painel-meta">
-          <button class="btn-refresh-painel" id="refresh-col-enel" onclick="refreshColuna('col-enel')" title="Atualizar">↻</button>
-          <button class="btn-minimizar" onclick="toggleMinimizar('col-enel')" title="Minimizar">▲</button>
-          <span class="painel-count" id="count-enel">—</span>
+          <button class="btn-minimizar" onclick="toggleMinimizar('col-favoritos')" title="Minimizar">▲</button>
+          <span class="painel-count" id="count-favoritos">—</span>
         </div>
       </div>
       <div class="painel-corpo">
-        <div id="enel-container"></div>
-        <div id="sem-enel" class="sem-resultado">Nenhum resultado.</div>
-      </div>
-    </div>
-
-    <!-- SPTRANS -->
-    <div class="painel tipo-transporte" id="col-sptrans" draggable="true">
-      <div class="painel-header">
-        <span class="painel-titulo">🚌 SPTrans — Ônibus <span class="col-status-icon" id="status-col-sptrans"></span></span>
-        <div class="painel-meta">
-          <span class="badge-nao-lido" id="nao-lidos-col-sptrans" style="display:none"></span>
-          <button class="btn-refresh-painel" id="refresh-col-sptrans" onclick="refreshColuna('col-sptrans')" title="Atualizar">↻</button>
-          <button class="btn-minimizar" onclick="toggleMinimizar('col-sptrans')" title="Minimizar">▲</button>
-          <span class="painel-count" id="count-sptrans">—</span>
-        </div>
-      </div>
-      <div class="painel-corpo">
-        <div id="sptrans-container" class="estado">Carregando...</div>
-        <div id="sem-sptrans" class="sem-resultado">Nenhum resultado.</div>
-      </div>
-    </div>
-
-    <!-- VOOS AO VIVO — FLIGHTRADAR24 -->
-    <div class="painel tipo-transporte" id="col-voos" draggable="true">
-      <div class="painel-header">
-        <span class="painel-titulo">✈️ Voos ao Vivo — SP <span class="col-status-icon" id="status-col-voos"></span></span>
-        <div class="painel-meta">
-          <button class="btn-refresh-painel" id="refresh-col-voos" onclick="refreshColuna('col-voos')" title="Atualizar">↻</button>
-          <button class="btn-minimizar" onclick="toggleMinimizar('col-voos')" title="Minimizar">▲</button>
-          <span class="painel-count" id="count-voos">—</span>
-        </div>
-      </div>
-      <div class="painel-corpo" style="overflow:hidden;padding:0;">
-        <div id="voos-container"></div>
-        <div id="sem-voos" class="sem-resultado"></div>
-      </div>
-    </div>
-
-    <!-- RADAR DE CHUVA — WINDY -->
-    <div class="painel tipo-noticias" id="col-tv" draggable="true">
-      <div class="painel-header">
-        <span class="painel-titulo">🌧️ Radar de Chuva — Windy <span class="col-status-icon" id="status-col-tv"></span></span>
-        <div class="painel-meta">
-          <button class="btn-refresh-painel" id="refresh-col-tv" onclick="refreshColuna('col-tv')" title="Atualizar">↻</button>
-          <button class="btn-minimizar" onclick="toggleMinimizar('col-tv')" title="Minimizar">▲</button>
-          <span class="painel-count" id="count-tv">—</span>
-        </div>
-      </div>
-      <div class="painel-corpo" style="overflow:hidden;padding:0;">
-        <div id="tv-container"></div>
-        <div id="sem-tv" class="sem-resultado"></div>
-      </div>
-    </div>
-
-    <!-- ASSEMBLEIA LEGISLATIVA SP -->
-    <div class="painel tipo-noticias" id="col-assembleia" draggable="true">
-      <div class="painel-header">
-        <span class="painel-titulo">🏛️ Assembleia Legislativa SP <span class="col-status-icon" id="status-col-assembleia"></span></span>
-        <div class="painel-meta">
-          <span class="badge-nao-lido" id="nao-lidos-col-assembleia" style="display:none"></span>
-          <button class="btn-refresh-painel" id="refresh-col-assembleia" onclick="refreshColuna('col-assembleia')" title="Atualizar">↻</button>
-          <button class="btn-minimizar" onclick="toggleMinimizar('col-assembleia')" title="Minimizar">▲</button>
-          <span class="painel-count" id="count-assembleia">—</span>
-        </div>
-      </div>
-      <div class="painel-corpo">
-        <div id="assembleia-container" class="estado">Carregando...</div>
-        <div id="sem-assembleia" class="sem-resultado">Nenhum resultado.</div>
-      </div>
-    </div>
-
-    <!-- CÂMARA MUNICIPAL SP -->
-    <div class="painel tipo-noticias" id="col-camara" draggable="true">
-      <div class="painel-header">
-        <span class="painel-titulo">🏙️ Câmara Municipal SP <span class="col-status-icon" id="status-col-camara"></span></span>
-        <div class="painel-meta">
-          <span class="badge-nao-lido" id="nao-lidos-col-camara" style="display:none"></span>
-          <button class="btn-refresh-painel" id="refresh-col-camara" onclick="refreshColuna('col-camara')" title="Atualizar">↻</button>
-          <button class="btn-minimizar" onclick="toggleMinimizar('col-camara')" title="Minimizar">▲</button>
-          <span class="painel-count" id="count-camara">—</span>
-        </div>
-      </div>
-      <div class="painel-corpo">
-        <div id="camara-container" class="estado">Carregando...</div>
-        <div id="sem-camara" class="sem-resultado">Nenhum resultado.</div>
-      </div>
-    </div>
-
-    <!-- G1 SÃO PAULO -->
-    <div class="painel tipo-noticias" id="col-g1" draggable="true">
-      <div class="painel-header">
-        <span class="painel-titulo">📰 G1 São Paulo <span class="col-status-icon" id="status-col-g1"></span></span>
-        <div class="painel-meta">
-          <span class="badge-nao-lido" id="nao-lidos-col-g1" style="display:none"></span>
-          <button class="btn-refresh-painel" id="refresh-col-g1" onclick="refreshColuna('col-g1')" title="Atualizar">↻</button>
-          <button class="btn-minimizar" onclick="toggleMinimizar('col-g1')" title="Minimizar">▲</button>
-          <span class="painel-count" id="count-g1">—</span>
-        </div>
-      </div>
-      <div class="painel-corpo">
-        <div id="g1-container" class="estado">Carregando...</div>
-        <div id="sem-g1" class="sem-resultado">Nenhum resultado.</div>
-      </div>
-    </div>
-
-    <!-- QUALIDADE DO AR -->
-    <div class="painel tipo-servicos" id="col-ar" draggable="true">
-      <div class="painel-header">
-        <span class="painel-titulo">🌫️ Qualidade do Ar <span class="col-status-icon" id="status-col-ar"></span></span>
-        <div class="painel-meta">
-          <button class="btn-refresh-painel" id="refresh-col-ar" onclick="refreshColuna('col-ar')" title="Atualizar">↻</button>
-          <button class="btn-minimizar" onclick="toggleMinimizar('col-ar')" title="Minimizar">▲</button>
-          <span class="painel-count" id="count-ar">—</span>
-        </div>
-      </div>
-      <div class="painel-corpo">
-        <div id="ar-container" class="estado">Carregando...</div>
-        <div id="sem-ar" class="sem-resultado">Nenhum resultado.</div>
-      </div>
-    </div>
-
-    <!-- RODOVIAS SP -->
-    <div class="painel tipo-transporte" id="col-rodovias" draggable="true">
-      <div class="painel-header">
-        <span class="painel-titulo">🛣️ Rodovias SP <span class="col-status-icon" id="status-col-rodovias"></span></span>
-        <div class="painel-meta">
-          <button class="btn-refresh-painel" id="refresh-col-rodovias" onclick="refreshColuna('col-rodovias')" title="Atualizar">↻</button>
-          <button class="btn-minimizar" onclick="toggleMinimizar('col-rodovias')" title="Minimizar">▲</button>
-          <span class="painel-count" id="count-rodovias">—</span>
-        </div>
-      </div>
-      <div class="painel-corpo">
-        <div id="rodovias-container"></div>
-        <div id="sem-rodovias" class="sem-resultado">Nenhum resultado.</div>
+        <div id="favoritos-container" class="estado">Nenhum favorito ainda.<br><small style="opacity:0.6">Clique em ★ em qualquer item.</small></div>
+        <div id="sem-favoritos" class="sem-resultado">Nenhum resultado.</div>
       </div>
     </div>
 
@@ -1755,8 +1756,10 @@
       const btn = document.createElement('button');
       btn.className = 'btn-col-expand';
       btn.id = 'expand-' + col.id;
-      btn.title = 'Expandir painel';
-      btn.textContent = '⊕';
+      const jaExpandido = col.classList.contains('col-expandida');
+      btn.title = jaExpandido ? 'Reduzir painel' : 'Expandir painel';
+      btn.textContent = jaExpandido ? '⊖' : '⊕';
+      if (jaExpandido) btn.classList.add('ativo');
       btn.onclick = () => toggleExpandir(col.id);
       controls.insertBefore(btn, controls.firstChild);
     });
