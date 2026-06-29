@@ -613,22 +613,22 @@
     <button class="btn-scroll-nav" onclick="document.getElementById('grade').scrollTo({top:0,behavior:'smooth'})" title="Ir para o topo">▲▲</button>
     <button class="btn-scroll-nav" onclick="document.getElementById('grade').scrollTo({top:99999,behavior:'smooth'})" title="Ir para o final">▼▼</button>
     <label>Painéis:</label>
-    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-tv"          onclick="togglePainel(this)">🌧️ Windy</button>
-    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-clima"       onclick="togglePainel(this)">🌦️ Clima</button>
-    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-ar"          onclick="togglePainel(this)">🌫️ Ar</button>
-    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-g1"          onclick="togglePainel(this)">📰 G1 SP</button>
-    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-diario"      onclick="togglePainel(this)">🚇 Diário</button>
-    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-assembleia"  onclick="togglePainel(this)">🏛️ AL-SP</button>
-    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-camara"      onclick="togglePainel(this)">🏙️ Câmara SP</button>
-    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-trens"       onclick="togglePainel(this)">🚉 Trens</button>
-    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-cet"         onclick="togglePainel(this)">🚦 CET</button>
-    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-waze"        onclick="togglePainel(this)">🗺️ Waze</button>
-    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-sptrans"     onclick="togglePainel(this)">🚌 SPTrans</button>
-    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-rodovias"    onclick="togglePainel(this)">🛣️ Rodovias</button>
-    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-voos"        onclick="togglePainel(this)">✈️ Voos</button>
-    <button class="toggle-painel-btn tipo-infra ativo"      data-col="col-enel"        onclick="togglePainel(this)">⚡ ENEL</button>
-    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-mananciais"  onclick="togglePainel(this)">💧 Mananciais</button>
-    <button class="toggle-painel-btn tipo-favoritos"        data-col="col-favoritos"   onclick="togglePainel(this)">⭐ Favoritos</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-tv"          onclick="togglePainel(this, event)">🌧️ Windy</button>
+    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-clima"       onclick="togglePainel(this, event)">🌦️ Clima</button>
+    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-ar"          onclick="togglePainel(this, event)">🌫️ Ar</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-g1"          onclick="togglePainel(this, event)">📰 G1 SP</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-diario"      onclick="togglePainel(this, event)">🚇 Diário</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-assembleia"  onclick="togglePainel(this, event)">🏛️ AL-SP</button>
+    <button class="toggle-painel-btn tipo-noticias ativo"   data-col="col-camara"      onclick="togglePainel(this, event)">🏙️ Câmara SP</button>
+    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-trens"       onclick="togglePainel(this, event)">🚉 Trens</button>
+    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-cet"         onclick="togglePainel(this, event)">🚦 CET</button>
+    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-waze"        onclick="togglePainel(this, event)">🗺️ Waze</button>
+    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-sptrans"     onclick="togglePainel(this, event)">🚌 SPTrans</button>
+    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-rodovias"    onclick="togglePainel(this, event)">🛣️ Rodovias</button>
+    <button class="toggle-painel-btn tipo-transporte ativo" data-col="col-voos"        onclick="togglePainel(this, event)">✈️ Voos</button>
+    <button class="toggle-painel-btn tipo-infra ativo"      data-col="col-enel"        onclick="togglePainel(this, event)">⚡ ENEL</button>
+    <button class="toggle-painel-btn tipo-servicos ativo"   data-col="col-mananciais"  onclick="togglePainel(this, event)">💧 Mananciais</button>
+    <button class="toggle-painel-btn tipo-favoritos"        data-col="col-favoritos"   onclick="togglePainel(this, event)">⭐ Favoritos</button>
   </div>
 
   <!-- BUSCA -->
@@ -1816,14 +1816,27 @@
   // ==============================
   // TOGGLE PAINEL (mostrar/ocultar)
   // ==============================
-  function togglePainel(btn) {
+  function togglePainel(btn, e) {
     const colId = btn.dataset.col;
     const painel = document.getElementById(colId);
     if (!painel) return;
     const ativo = btn.classList.contains('ativo');
-    btn.classList.toggle('ativo', !ativo);
-    painel.classList.toggle('col-oculta', ativo);
-    salvarEstadoPaineis();
+
+    if (!ativo) {
+      // Painel oculto → mostrar e rolar até ele
+      btn.classList.add('ativo');
+      painel.classList.remove('col-oculta');
+      salvarEstadoPaineis();
+      setTimeout(() => painel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
+    } else if (e?.shiftKey) {
+      // Shift+clique → ocultar
+      btn.classList.remove('ativo');
+      painel.classList.add('col-oculta');
+      salvarEstadoPaineis();
+    } else {
+      // Clique normal em painel já visível → rolar até ele
+      painel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
   function setupExpandButtons() {
     document.querySelectorAll('.painel[id]').forEach(col => {
