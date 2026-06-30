@@ -1803,7 +1803,8 @@
   // ==============================
   async function carregarTodosOsDados() {
     atualizarStatusGlobal('carregando');
-    await Promise.allSettled(COLUNAS.filter(c => !c.local).map(c => wrapCarregar(c.colId, c.fn)()));
+    // Painéis ocultados pelo usuário não são buscados — economiza chamadas ao proxy (cota diária do Apps Script)
+    await Promise.allSettled(COLUNAS.filter(c => !c.local && !document.getElementById(c.colId)?.classList.contains('col-oculta')).map(c => wrapCarregar(c.colId, c.fn)()));
     ultimaAtualizacao = new Date();
     proximoRefresh    = Date.now() + TEMPO_REFRESH;
     atualizarStatusGlobal('ok');
@@ -1828,6 +1829,8 @@
       painel.classList.remove('col-oculta');
       salvarEstadoPaineis();
       setTimeout(() => painel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
+      // Painel oculto não é buscado nos refreshes automáticos — atualiza agora que voltou a ficar visível
+      refreshColuna(colId);
     } else if (e?.shiftKey) {
       // Shift+clique → ocultar
       btn.classList.remove('ativo');
@@ -2208,7 +2211,13 @@
   // AUTO-REFRESH
   // ==============================
   function iniciarAutoRefresh() {
-    setInterval(() => { if (Date.now() >= proximoRefresh) carregarTodosOsDados(); }, 30000);
+    setInterval(() => {
+      if (document.hidden) return; // pausa com a aba em segundo plano (economiza cota do proxy)
+      if (Date.now() >= proximoRefresh) carregarTodosOsDados();
+    }, 30000);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && proximoRefresh && Date.now() >= proximoRefresh) carregarTodosOsDados();
+    });
   }
 
   // ==============================
